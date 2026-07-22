@@ -4,7 +4,7 @@
 
 
 
-![HIER RUNTERLADEN]([(https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0))
+![HIER RUNTERLADEN](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0))
 
 # GWCopyPro
 
