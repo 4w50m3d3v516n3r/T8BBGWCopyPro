@@ -2,6 +2,10 @@
 
 ![ScreenShot](/images/gw-copy-pro-banner.png)
 
+
+
+![HIER RUNTERLADEN]([(https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0))
+
 # GWCopyPro
 
 Eine Windows-Forms-Anwendung zur Verwaltung mehrerer [GreaseWeazle](https://github.com/keirf/greaseweazle)-Geräte und Disk-Image-Operationen mit einer dunklen, industriellen Benutzeroberfläche.
