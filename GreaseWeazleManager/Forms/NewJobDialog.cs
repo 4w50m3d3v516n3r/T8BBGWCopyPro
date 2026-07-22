@@ -85,7 +85,7 @@ namespace GwCopyPro.Forms
         /// <summary>Builds the tab control, all five tab pages, the preview bar, and the action buttons.</summary>
         private void InitializeComponent()
         {
-            const int FORM_W     = 840;
+            const int FORM_W     = 900;
             const int FORM_H     = 820;
             const int PAD        = 10;
             const int TAB_H      = 630;
