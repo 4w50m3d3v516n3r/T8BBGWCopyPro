@@ -16,6 +16,9 @@ A Windows Forms application for managing multiple [GreaseWeazle](https://github.
 - Attach **post-processing actions** (executables, batch scripts, PowerShell scripts) that run automatically after each successful job
 - Save and reload **job presets** so common configurations (formats, track ranges, flags) are a single click away
 
+## Author
+Author of the Software is Ilija Injac
+
 ## Requirements
 
 - Windows 10 / 11
