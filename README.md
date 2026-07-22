@@ -1,12 +1,14 @@
-# GreaseWeazle Manager
+[English](README.md) | [Deutsch](README.de.md)
+
+#GWCopyPro
 
 A Windows Forms application for managing multiple [GreaseWeazle](https://github.com/keirf/greaseweazle) devices and disk-image operations with a dark, industrial UI.
 
-## What is GreaseWeazle Manager?
+## What isGWCopyPro?
 
 [GreaseWeazle](https://github.com/keirf/greaseweazle) is an open-source USB floppy-controller that reads and writes raw magnetic flux from virtually any floppy disk format. The official tool (`gw.exe`) is a command-line utility.
 
-**GreaseWeazle Manager** wraps `gw.exe` in a graphical front-end that lets you:
+**GWCopyPro** wraps `gw.exe` in a graphical front-end that lets you:
 
 - Manage **multiple GreaseWeazle devices** connected simultaneously via separate COM ports
 - Create, queue, and monitor **read and write jobs** with a live track-by-track visualiser
@@ -23,7 +25,7 @@ A Windows Forms application for managing multiple [GreaseWeazle](https://github.
 ## Build
 
 ```
-dotnet build GreaseWeazleManager/GreaseWeazleManager.csproj -c Release
+dotnet buildGWCopyPro/GreaseWeazleManager.csproj -c Release
 ```
 
 Or open `GreaseWeazleManager.sln` in Visual Studio 2022+ and press **F5**.
@@ -31,7 +33,7 @@ Or open `GreaseWeazleManager.sln` in Visual Studio 2022+ and press **F5**.
 ## Getting Started
 
 1. Connect one or more GreaseWeazle devices via USB.
-2. Launch **GreaseWeazle Manager**.
+2. Launch **GWCopyPro**.
 3. Open **Device Manager** (toolbar button) and add each device — select its COM port and give it a friendly name.
 4. Click **New Job**, configure the read or write parameters, and press **Start**.
 5. Watch the track grid update in real time as `gw.exe` processes each cylinder/head.
