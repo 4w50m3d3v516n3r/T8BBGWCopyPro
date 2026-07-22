@@ -1,6 +1,8 @@
 [English](README.md) | [Deutsch](README.de.md)
 
-#GWCopyPro
+![ScreenShot](/images/gw-copy-pro-banner.png)
+
+# GWCopyPro
 
 A Windows Forms application for managing multiple [GreaseWeazle](https://github.com/keirf/greaseweazle) devices and disk-image operations with a dark, industrial UI.
 
