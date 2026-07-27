@@ -5,9 +5,6 @@
 
 [HIER RUNTERLADEN](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0)
 
-
-
-
 # GWCopyPro
 
 Eine Windows-Forms-Anwendung zur Verwaltung mehrerer [GreaseWeazle](https://github.com/keirf/greaseweazle)-Geräte und Disk-Image-Operationen mit einer dunklen, industriellen Benutzeroberfläche.
@@ -32,7 +29,7 @@ Der **GWCopyPro** stellt ein grafisches Frontend für `gw.exe` bereit, mit dem S
 
 ## Kurzes Einführungsvideo
 
-[![Schaut Euch das Video an](https://www.youtube.com/watch?v=xE41GHdKnQ4)
+[![Video Title](https://img.youtube.com/vi/xE41GHdKnQ4/0.jpg)](https://www.youtube.com/watch?v=xE41GHdKnQ4)
 
 ## Kompilieren
 
