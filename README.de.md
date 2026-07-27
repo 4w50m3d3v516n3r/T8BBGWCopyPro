@@ -32,7 +32,7 @@ Der **GWCopyPro** stellt ein grafisches Frontend für `gw.exe` bereit, mit dem S
 
 ## Kurzes Einführungsvideo
 
-[![Schaut Euch das Video an]([https://img.youtube.com/vi/_5tFXJQIzi4/0.jpg)](https://www.youtube.com/watch?v=_5tFXJQIzi4](https://youtu.be/xE41GHdKnQ4?si=GONCyyLglYEiv6hh))
+[![Schaut Euch das Video an](https://www.youtube.com/watch?v=xE41GHdKnQ4)
 
 ## Kompilieren
 
