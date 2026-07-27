@@ -23,6 +23,10 @@ A Windows Forms application for managing multiple [GreaseWeazle](https://github.
 ## Author
 Author of the Software is Ilija Injac
 
+## Short introductory video (you can translate the subtitles to english)
+
+[![Video Title](https://img.youtube.com/vi/xE41GHdKnQ4/0.jpg)](https://www.youtube.com/watch?v=xE41GHdKnQ4)
+
 ## Requirements
 
 - Windows 10 / 11
