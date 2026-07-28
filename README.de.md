@@ -25,7 +25,7 @@ Der **GWCopyPro** stellt ein grafisches Frontend für `gw.exe` bereit, mit dem S
 
 * Windows 10 / 11
 * [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (bzw. das SDK zum Kompilieren)
-* `gw.exe` v0.24+ aus dem [GreaseWeazle-Firmware-/Tools-Paket](https://github.com/keirf/greaseweazle)
+* `gw.exe` v0.24+ aus dem [GreaseWeazle-Firmware-/Tools-Paket](https://github.com/keirf/greaseweazle) Sollte über die PATH variable systemweit verfügbar sein oder der komplette Pfad sollte in den Einstellungen gesetzt werden
 
 ## Kurzes Einführungsvideo
 
