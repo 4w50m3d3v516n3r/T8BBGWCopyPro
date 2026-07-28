@@ -1261,6 +1261,4 @@ vollständig von `--tracks=` abgedeckt.
 
 ---
 
-*GWCopyPro ist © Ilija Injac / The8BitBox™ und steht unter MIT-Lizenz.
-GreaseWeazle ist ein Projekt von Keir Fraser. Dieses Handbuch beschreibt GWCopyPro 1.0
-mit gw.exe v0.24+.*
+
