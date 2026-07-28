@@ -1213,6 +1213,4 @@ update).
 
 ---
 
-*GWCopyPro is © Ilija Injac / The8BitBox™ and released under the MIT licence.
-GreaseWeazle is a project by Keir Fraser. This handbook describes GWCopyPro 1.0 with
-gw.exe v0.24+.*
+
