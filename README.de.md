@@ -11,6 +11,10 @@ Eine Windows-Forms-Anwendung zur Verwaltung mehrerer [GreaseWeazle](https://gith
 
 📖 **Ausführliches Benutzerhandbuch:** [Deutsch](docs/HANDBOOK.de.md) | [English](docs/HANDBOOK.md)
 
+Oder als PDF:
+
+[Deutsch](docs/HANDBOOK.de.pdf) | [English](docs/HANDBOOK.en.pdf)
+
 ## Was ist der GWCopyPro?
 
 [GreaseWeazle](https://github.com/keirf/greaseweazle) ist ein Open-Source-USB-Floppy-Controller, der rohen magnetischen Fluss von praktisch jedem Diskettenformat lesen und schreiben kann. Das offizielle Tool (`gw.exe`) ist ein Kommandozeilenprogramm.

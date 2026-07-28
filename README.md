@@ -10,6 +10,8 @@ A Windows Forms application for managing multiple [GreaseWeazle](https://github.
 
 📖 **Detailed user handbook:** [English](docs/HANDBOOK.md) | [Deutsch](docs/HANDBOOK.de.md)
 
+Or Handbook as PDF File: [English](docs/HANDBOOK.en.pdf) | [German](docs/HANDBOOK.de.pdf)
+
 ## What isGWCopyPro?
 
 [GreaseWeazle](https://github.com/keirf/greaseweazle) is an open-source USB floppy-controller that reads and writes raw magnetic flux from virtually any floppy disk format. The official tool (`gw.exe`) is a command-line utility.
