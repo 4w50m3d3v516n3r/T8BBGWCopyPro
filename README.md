@@ -31,7 +31,7 @@ Author of the Software is Ilija Injac
 
 - Windows 10 / 11
 - [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (or SDK to build)
-- `gw.exe` v0.24+ from the [GreaseWeazle firmware/tools package](https://github.com/keirf/greaseweazle)
+- `gw.exe` v0.24+ from the [GreaseWeazle firmware/tools package](https://github.com/keirf/greaseweazle) It should be available directly within the system environment via the PATH variable or setup later within the settings with the correct path
 
 ## Build
 
