@@ -2,6 +2,9 @@
 
 ![ScreenShot](/images/gw-copy-pro-banner.png)
 
+
+[HIER RUNTERLADEN](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0)
+
 # GWCopyPro
 
 Eine Windows-Forms-Anwendung zur Verwaltung mehrerer [GreaseWeazle](https://github.com/keirf/greaseweazle)-Geräte und Disk-Image-Operationen mit einer dunklen, industriellen Benutzeroberfläche.
@@ -24,7 +27,11 @@ Der **GWCopyPro** stellt ein grafisches Frontend für `gw.exe` bereit, mit dem S
 
 * Windows 10 / 11
 * [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (bzw. das SDK zum Kompilieren)
-* `gw.exe` v0.24+ aus dem [GreaseWeazle-Firmware-/Tools-Paket](https://github.com/keirf/greaseweazle)
+* `gw.exe` v0.24+ aus dem [GreaseWeazle-Firmware-/Tools-Paket](https://github.com/keirf/greaseweazle) Sollte über die PATH variable systemweit verfügbar sein oder der komplette Pfad sollte in den Einstellungen gesetzt werden
+
+## Kurzes Einführungsvideo
+
+[![Video Title](https://img.youtube.com/vi/xE41GHdKnQ4/0.jpg)](https://www.youtube.com/watch?v=xE41GHdKnQ4)
 
 ## Kompilieren
 
