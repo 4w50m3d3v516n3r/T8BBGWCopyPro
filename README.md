@@ -2,6 +2,8 @@
 
 ![ScreenShot](/images/gw-copy-pro-banner.png)
 
+[DOWNLOAD HERE!](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0)
+
 # GWCopyPro
 
 A Windows Forms application for managing multiple [GreaseWeazle](https://github.com/keirf/greaseweazle) devices and disk-image operations with a dark, industrial UI.
@@ -23,11 +25,15 @@ A Windows Forms application for managing multiple [GreaseWeazle](https://github.
 ## Author
 Author of the Software is Ilija Injac
 
+## Short introductory video (you can translate the subtitles to english)
+
+[![Video Title](https://img.youtube.com/vi/xE41GHdKnQ4/0.jpg)](https://www.youtube.com/watch?v=xE41GHdKnQ4)
+
 ## Requirements
 
 - Windows 10 / 11
 - [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (or SDK to build)
-- `gw.exe` v0.24+ from the [GreaseWeazle firmware/tools package](https://github.com/keirf/greaseweazle)
+- `gw.exe` v0.24+ from the [GreaseWeazle firmware/tools package](https://github.com/keirf/greaseweazle) It should be available directly within the system environment via the PATH variable or setup later within the settings with the correct path
 
 ## Build
 
