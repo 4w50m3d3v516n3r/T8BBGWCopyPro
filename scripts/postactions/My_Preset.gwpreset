@@ -1,0 +1,50 @@
+{
+  "PresetName": "My Preset",
+  "JobType": 0,
+  "Device": "COM3",
+  "Drive": null,
+  "DiskFormat": null,
+  "StartCylinder": 0,
+  "EndCylinder": 79,
+  "Head": null,
+  "Step": null,
+  "HSwap": false,
+  "Head0Offset": null,
+  "Head1Offset": null,
+  "Revolutions": null,
+  "Densel": null,
+  "Bitrate": null,
+  "Retries": null,
+  "NoClobber": false,
+  "RawRead": false,
+  "Reverse": false,
+  "HardSectors": false,
+  "Erase": false,
+  "Verify": false,
+  "Precomp": null,
+  "GenTg43": false,
+  "ExtraArgs": null,
+  "FilePattern": "",
+  "RepetitiveMode": false,
+  "StartIndex": 1,
+  "DateTimeFormat": "yyyyMMdd_HHmmss",
+  "OutputFolder": "",
+  "PostActions": [
+    {
+      "Name": "Auspacken",
+      "ExecutablePath": "C:\\src\\T8BBGWCopyPro\\scripts\\postactions\\Extract-Rar.bat",
+      "Arguments": "test.rar",
+      "IsEnabled": true,
+      "ActionType": 1,
+      "Order": 1
+    },
+    {
+      "Name": "Konvertierung",
+      "ExecutablePath": "C:\\src\\T8BBGWCopyPro\\scripts\\postactions\\Convert-Image.bat",
+      "Arguments": "",
+      "IsEnabled": true,
+      "ActionType": 1,
+      "Order": 2
+    }
+  ]
+}
