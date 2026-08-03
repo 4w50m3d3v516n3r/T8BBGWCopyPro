@@ -106,6 +106,12 @@ namespace GwCopyPro.Models
         /// </summary>
         public string  OutputFolder       { get; set; } = "";
 
+        /// <summary>Whether this preset uses a device group for repetitive mode.</summary>
+        public bool UseDeviceGroup { get; set; }
+
+        /// <summary>Serialisable device-group member list (empty when <see cref="UseDeviceGroup"/> is off).</summary>
+        public List<GroupMemberPreset> GroupMembers { get; set; } = new();
+
         /// <summary>Serialisable post-action definitions attached to this preset.</summary>
         public List<PostActionPreset> PostActions { get; set; } = new();
 
@@ -263,6 +269,21 @@ namespace GwCopyPro.Models
             ActionType     = ActionType,
             Order          = Order
         };
+    }
+
+    /// <summary>
+    /// Serialisable snapshot of one device-group member: the device identity plus drive address.
+    /// </summary>
+    public class GroupMemberPreset
+    {
+        /// <summary>The <see cref="GreaseWeazleDevice.Id"/> of the member device.</summary>
+        public string DeviceId { get; set; } = "";
+
+        /// <summary>Device display name at save time, shown when the device is currently absent.</summary>
+        public string DeviceName { get; set; } = "";
+
+        /// <summary>Drive address: <c>0</c>, <c>1</c>, <c>a</c>, or <c>b</c>.</summary>
+        public string Drive { get; set; } = "0";
     }
 
     /// <summary>
