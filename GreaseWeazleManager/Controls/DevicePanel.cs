@@ -23,9 +23,11 @@ namespace GwCopyPro.Controls
         private readonly PictureBox           _statusLight;
         private readonly Button               _btnRemove;
         private readonly Button               _btnNewJob;
+        private readonly Button               _btnBlink;
         private readonly System.Windows.Forms.Timer _pulseTimer;
         private Action<GreaseWeazleDevice>?   _removeCallback;
         private Action<GreaseWeazleDevice>?   _newJobCallback;
+        private Action<GreaseWeazleDevice>?   _blinkCallback;
         private float _pulse    = 0f;
         private bool  _pulseDir = true;
 
@@ -39,14 +41,17 @@ namespace GwCopyPro.Controls
         /// <param name="device">The device whose information is displayed.</param>
         /// <param name="removeCallback">Invoked when the user clicks the remove button.</param>
         /// <param name="newJobCallback">Invoked when the user clicks the New Job button.</param>
+        /// <param name="blinkCallback">Invoked when the user clicks the Blink button to identify the drive.</param>
         public DevicePanel(
             GreaseWeazleDevice       device,
             Action<GreaseWeazleDevice> removeCallback,
-            Action<GreaseWeazleDevice> newJobCallback)
+            Action<GreaseWeazleDevice> newJobCallback,
+            Action<GreaseWeazleDevice> blinkCallback)
         {
             _device         = device;
             _removeCallback = removeCallback;
             _newJobCallback = newJobCallback;
+            _blinkCallback  = blinkCallback;
 
             SetStyle(ControlStyles.OptimizedDoubleBuffer |
                      ControlStyles.AllPaintingInWmPaint |
@@ -138,10 +143,24 @@ namespace GwCopyPro.Controls
             _btnRemove.FlatAppearance.BorderColor = Color.FromArgb(100, 40, 40);
             _btnRemove.Click += (s, e) => _removeCallback?.Invoke(_device);
 
+            _btnBlink = new Button
+            {
+                Text      = L10n.T("dev.blink"),
+                Location  = new Point(76, 110),
+                Size      = new Size(124, 18),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(40, 35, 20),
+                ForeColor = Color.FromArgb(220, 180, 80),
+                Font      = new Font("Consolas", 7.5f),
+                Enabled   = device.IsConnected
+            };
+            _btnBlink.FlatAppearance.BorderColor = Color.FromArgb(120, 100, 40);
+            _btnBlink.Click += (s, e) => _blinkCallback?.Invoke(_device);
+
             Controls.AddRange(new Control[]
             {
                 _lblName, _lblPort, _lblFw, _lblConn,
-                _btnNewJob, _btnRemove, _statusLight
+                _btnNewJob, _btnRemove, _btnBlink, _statusLight
             });
 
             _pulseTimer = new System.Windows.Forms.Timer { Interval = 50 };
@@ -156,6 +175,9 @@ namespace GwCopyPro.Controls
 
             if (device.IsConnected) _pulseTimer.Start();
         }
+
+        /// <summary>Disables the Blink button while an identify sequence runs on this device.</summary>
+        public void SetBlinkBusy(bool busy) => _btnBlink.Enabled = !busy && _device.IsConnected;
 
         /// <summary>
         /// Paints the status LED as a filled ellipse whose green intensity pulses smoothly

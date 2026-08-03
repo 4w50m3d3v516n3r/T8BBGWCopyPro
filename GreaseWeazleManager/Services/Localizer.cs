@@ -67,6 +67,10 @@ namespace GwCopyPro.Services
             ["dev.disconnected"]       = "● Disconnected",
             ["dev.remove"]             = "×",
             ["dev.new_job"]            = "▶ New Job",
+            ["dev.blink"]              = "⚡ Blink",
+            ["status.blinking_dev"]    = "Blinking {0} ({1})…",
+            ["status.blink_done"]      = "Blink sequence finished on {0}.",
+            ["status.blink_error"]     = "Blink failed on {0}: device busy or unplugged.",
 
             ["settings.title"]         = "Settings",
             ["settings.gw_exe"]        = "Path to gw.exe:",
@@ -290,6 +294,10 @@ namespace GwCopyPro.Services
             ["dev.disconnected"]       = "● Nicht verbunden",
             ["dev.remove"]             = "×",
             ["dev.new_job"]            = "▶ Neue Aufgabe",
+            ["dev.blink"]              = "⚡ Blinken",
+            ["status.blinking_dev"]    = "Blinke {0} ({1})…",
+            ["status.blink_done"]      = "Blinksequenz auf {0} beendet.",
+            ["status.blink_error"]     = "Blinken auf {0} fehlgeschlagen: Gerät belegt oder getrennt.",
 
             ["settings.title"]         = "Einstellungen",
             ["settings.gw_exe"]        = "Pfad zu gw.exe:",

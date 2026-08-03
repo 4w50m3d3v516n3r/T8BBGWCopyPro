@@ -26,6 +26,7 @@ namespace GwCopyPro.Forms
         private readonly List<CancellationTokenSource> _cts       = new();
         private readonly GwService                     _gwService = new();
         private readonly Dictionary<string, JobPanel>  _jobPanels = new();
+        private bool _blinkInProgress;
 
         private Panel           _topBar      = null!;
         private FlowLayoutPanel _deviceBar   = null!;
@@ -575,9 +576,59 @@ namespace GwCopyPro.Forms
                 var dp = new DevicePanel(
                     dev,
                     d => { _devices.Remove(d); RefreshDeviceBar(); },
-                    d => OpenNewJobDialog(preselectedDevice: d));
+                    d => OpenNewJobDialog(preselectedDevice: d),
+                    d => BlinkIdentify(d));
                 _deviceBar.Controls.Add(dp);
             }
+        }
+
+        /// <summary>
+        /// Runs a short identify sequence on the device: three blink pulses alternating
+        /// drive 0 and drive 1, covering both unit-select lines so any attached drive
+        /// lights regardless of its 0/1/a/b addressing. Only one sequence runs at a time.
+        /// </summary>
+        /// <param name="dev">The device whose drive should blink.</param>
+        private void BlinkIdentify(GreaseWeazleDevice dev)
+        {
+            if (_blinkInProgress) return;
+            _blinkInProgress = true;
+            SetPanelsBlinkBusy(true);
+            SetStatus(string.Format(L10n.T("status.blinking_dev"), dev.Name, dev.SerialPort),
+                Color.FromArgb(220, 180, 80));
+
+            var prober = new DriveProber(_gwService.GwExePath);
+            Task.Run(async () =>
+            {
+                bool ok = true;
+                try
+                {
+                    for (int i = 0; i < 3 && ok; i++)
+                    {
+                        await prober.BlinkOnceAsync(dev.SerialPort, "0", CancellationToken.None);
+                        await Task.Delay(350);
+                        await prober.BlinkOnceAsync(dev.SerialPort, "1", CancellationToken.None);
+                        await Task.Delay(350);
+                    }
+                }
+                catch { ok = false; }
+
+                SafeInvoke(() =>
+                {
+                    _blinkInProgress = false;
+                    SetPanelsBlinkBusy(false);
+                    SetStatus(
+                        ok ? string.Format(L10n.T("status.blink_done"), dev.Name)
+                           : string.Format(L10n.T("status.blink_error"), dev.Name),
+                        ok ? Color.FromArgb(80, 220, 120) : Color.FromArgb(240, 80, 80));
+                });
+            });
+        }
+
+        /// <summary>Toggles the Blink button on every device tile.</summary>
+        private void SetPanelsBlinkBusy(bool busy)
+        {
+            foreach (Control c in _deviceBar.Controls)
+                if (c is DevicePanel dp) dp.SetBlinkBusy(busy);
         }
 
         /// <summary>Creates the placeholder label shown in the device strip when no devices are registered.</summary>
