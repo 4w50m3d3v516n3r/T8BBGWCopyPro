@@ -23,6 +23,9 @@ namespace GwCopyPro.Forms
         /// <summary>Gets the <see cref="GwJob"/> created when the user clicks Start Job, or <see langword="null"/> if cancelled.</summary>
         public GwJob? Result { get; private set; }
 
+        /// <summary>Gets the group job created when the user starts a device-group job, or <see langword="null"/>.</summary>
+        public GroupRepetitiveJob? GroupResult { get; private set; }
+
         private ComboBox      cmbDevice        = null!;
         private ComboBox      cmbJobType       = null!;
         private TextBox       txtImageFile      = null!;
@@ -63,6 +66,10 @@ namespace GwCopyPro.Forms
         private TextBox       txtDtFormat       = null!;
         private Label         lblPatternPreview = null!;
         private TextBox       txtPresetName     = null!;
+        private CheckBox      chkUseGroup       = null!;
+        private ComboBox      cmbGroupDevice    = null!;
+        private ComboBox      cmbGroupDrive     = null!;
+        private ListView      lvGroupMembers    = null!;
 
         private bool _initialized;
 
@@ -579,6 +586,63 @@ namespace GwCopyPro.Forms
         /// </summary>
         private void BtnOk_Click(object? sender, EventArgs e)
         {
+            if (chkUseGroup?.Checked ?? false)
+            {
+                if (!(chkRepetitive?.Checked ?? false) ||
+                    !Models.FilePattern.HasTokens(txtFilePattern?.Text ?? ""))
+                {
+                    MessageBox.Show(L10n.T("job_dlg.group_needs_repeat"),
+                        L10n.T("job_dlg.group_cap"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    DialogResult = DialogResult.None;
+                    return;
+                }
+
+                var members = ReadGroupMembers();
+                string? err = GroupRepetitiveJob.Validate(members);
+                if (err != null)
+                {
+                    MessageBox.Show(L10n.T(err), L10n.T("job_dlg.group_cap"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    DialogResult = DialogResult.None;
+                    return;
+                }
+
+                var missing = members.Find(m => !m.Device.IsConnected);
+                if (missing != null)
+                {
+                    MessageBox.Show(
+                        string.Format(L10n.T("job_dlg.group_missing"),
+                            missing.Device.ToString()),
+                        L10n.T("job_dlg.group_cap"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    DialogResult = DialogResult.None;
+                    return;
+                }
+
+                var template = BuildParameters();
+                template.Device    = null;
+                template.Drive     = null;
+                template.ImageFile = null;
+
+                var groupActions = new List<PostAction>();
+                foreach (ListViewItem item in lvPostActions.Items)
+                    groupActions.Add((PostAction)item.Tag!);
+
+                GroupResult = new GroupRepetitiveJob
+                {
+                    JobType           = cmbJobType.SelectedIndex == 0 ? JobType.Read : JobType.Write,
+                    ParameterTemplate = template,
+                    PostActions       = groupActions,
+                    FilePattern       = txtFilePattern!.Text,
+                    OutputFolder      = txtOutputFolder?.Text ?? "",
+                    DateTimeFormat    = txtDtFormat?.Text ?? "yyyyMMdd_HHmmss",
+                    NextDiskNumber    = (int)(nudStartIndex?.Value ?? 1),
+                    Members           = members
+                };
+                return;   // DialogResult stays OK; Result stays null
+            }
+
             if (string.IsNullOrWhiteSpace(txtImageFile.Text) &&
                 !(chkRepetitive?.Checked ?? false))
             {
@@ -821,6 +885,73 @@ namespace GwCopyPro.Forms
             txtPresetName = MkTxt(175, y, 400);
             txtPresetName.Text = "My Preset";
             tab.Controls.Add(txtPresetName);
+
+            y += 32;
+            tab.Controls.Add(Sep(10, y, 760)); y += 10;
+
+            chkUseGroup = MkChk(L10n.T("job_dlg.use_group"), 10, y);
+            chkUseGroup.Font = new Font("Consolas", 9f, FontStyle.Bold);
+            chkUseGroup.ForeColor = Color.FromArgb(120, 190, 255);
+            chkUseGroup.CheckedChanged += (s, e) =>
+            {
+                bool on = chkUseGroup.Checked;
+                cmbGroupDevice.Enabled = on;
+                cmbGroupDrive.Enabled  = on;
+                lvGroupMembers.Enabled = on;
+                if (on && !chkRepetitive.Checked) chkRepetitive.Checked = true;
+            };
+            tab.Controls.Add(chkUseGroup);
+
+            y += 26;
+            cmbGroupDevice = MkCombo(10, y, 320);
+            foreach (var d in _devices) cmbGroupDevice.Items.Add(d);
+            if (cmbGroupDevice.Items.Count > 0) cmbGroupDevice.SelectedIndex = 0;
+
+            cmbGroupDrive = MkCombo(338, y, 70);
+            cmbGroupDrive.Items.AddRange(new object[] { "0", "1", "a", "b" });
+            cmbGroupDrive.SelectedIndex = 0;
+
+            var btnGroupAdd = MakeBtn(L10n.T("job_dlg.group_add"), 416, y, 110, 22,
+                Color.FromArgb(18, 60, 32), Color.FromArgb(90, 220, 120), Color.FromArgb(40, 120, 65));
+            btnGroupAdd.Click += (s, e) =>
+            {
+                if (cmbGroupDevice.SelectedItem is not GreaseWeazleDevice dev) return;
+                var item = new ListViewItem(dev.ToString());
+                item.SubItems.Add(cmbGroupDrive.SelectedItem?.ToString() ?? "0");
+                item.Tag = dev;
+                lvGroupMembers.Items.Add(item);
+            };
+
+            var btnGroupRemove = MakeBtn(L10n.T("job_dlg.group_remove"), 534, y, 110, 22,
+                Color.FromArgb(60, 20, 20), Color.FromArgb(200, 80, 80), Color.FromArgb(100, 40, 40));
+            btnGroupRemove.Click += (s, e) =>
+            {
+                foreach (ListViewItem it in lvGroupMembers.SelectedItems)
+                    lvGroupMembers.Items.Remove(it);
+            };
+
+            tab.Controls.AddRange(new Control[]
+                { cmbGroupDevice, cmbGroupDrive, btnGroupAdd, btnGroupRemove });
+
+            y += 28;
+            lvGroupMembers = new ListView
+            {
+                Location      = new Point(10, y),
+                Size          = new Size(760, 86),
+                View          = View.Details,
+                FullRowSelect = true,
+                BackColor     = Color.FromArgb(28, 34, 48),
+                ForeColor     = Color.FromArgb(200, 230, 255),
+                Font          = new Font("Consolas", 8.5f),
+                HeaderStyle   = ColumnHeaderStyle.Nonclickable
+            };
+            lvGroupMembers.Columns.Add(L10n.T("job_dlg.group_col_device"), 480);
+            lvGroupMembers.Columns.Add(L10n.T("job_dlg.group_col_drive"), 120);
+            tab.Controls.Add(lvGroupMembers);
+
+            cmbGroupDevice.Enabled = false;
+            cmbGroupDrive.Enabled  = false;
+            lvGroupMembers.Enabled = false;
         }
 
         /// <summary>Refreshes the file-pattern live preview label from the current pattern, index, date-time format, and output folder.</summary>
@@ -931,7 +1062,34 @@ namespace GwCopyPro.Forms
             preset.StartIndex     = (int)(nudStartIndex?.Value ?? 1);
             preset.DateTimeFormat = txtDtFormat?.Text ?? "yyyyMMdd_HHmmss";
             preset.OutputFolder   = txtOutputFolder?.Text ?? "";
+
+            preset.UseDeviceGroup = chkUseGroup?.Checked ?? false;
+            preset.GroupMembers.Clear();
+            if (lvGroupMembers != null)
+                foreach (ListViewItem item in lvGroupMembers.Items)
+                    if (item.Tag is GreaseWeazleDevice dev)
+                        preset.GroupMembers.Add(new GroupMemberPreset
+                        {
+                            DeviceId   = dev.Id,
+                            DeviceName = dev.ToString(),
+                            Drive      = item.SubItems[1].Text
+                        });
             return preset;
+        }
+
+        /// <summary>Reads the group member rows from the list view.</summary>
+        /// <returns>Members in row order. Rows whose device is absent (null tag) are skipped.</returns>
+        private List<DeviceGroupMember> ReadGroupMembers()
+        {
+            var members = new List<DeviceGroupMember>();
+            foreach (ListViewItem item in lvGroupMembers.Items)
+                if (item.Tag is GreaseWeazleDevice dev)
+                    members.Add(new DeviceGroupMember
+                    {
+                        Device = dev,
+                        Drive  = item.SubItems[1].Text
+                    });
+            return members;
         }
 
         /// <summary>
@@ -996,6 +1154,19 @@ namespace GwCopyPro.Forms
             nudStartIndex.Value   = Math.Max(1, preset.StartIndex);
             txtDtFormat.Text      = preset.DateTimeFormat ?? "yyyyMMdd_HHmmss";
             if (txtPresetName != null) txtPresetName.Text = preset.PresetName;
+
+            lvGroupMembers.Items.Clear();
+            foreach (var gm in preset.GroupMembers)
+            {
+                var dev = _devices.Find(d => d.Id == gm.DeviceId)
+                       ?? _devices.Find(d => d.ToString() == gm.DeviceName);
+                var item = new ListViewItem(dev?.ToString() ?? gm.DeviceName + " ⚠");
+                item.SubItems.Add(gm.Drive);
+                item.Tag = dev;               // null when the device is absent
+                if (dev == null) item.ForeColor = Color.FromArgb(220, 120, 80);
+                lvGroupMembers.Items.Add(item);
+            }
+            chkUseGroup.Checked = preset.UseDeviceGroup;
 
             if (lvPostActions != null)
             {
