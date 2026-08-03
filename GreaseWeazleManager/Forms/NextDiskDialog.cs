@@ -40,15 +40,19 @@ namespace GwCopyPro.Forms
         /// <param name="dateTimeFormat">
         /// Format string used to preview how the <c>{dt}</c> token will expand for the next disk.
         /// </param>
+        /// <param name="deviceText">Display name of the GreaseWeazle device in use (name + COM port).</param>
+        /// <param name="driveText">Drive address in use, or a localized "(auto)" placeholder.</param>
         public NextDiskDialog(
             int      completedDiskNumber,
             string   completedFile,
             string   nextFile,
             TimeSpan lastDuration,
-            string   dateTimeFormat)
+            string   dateTimeFormat,
+            string   deviceText,
+            string   driveText)
         {
             InitializeComponent(completedDiskNumber, completedFile, nextFile,
-                                lastDuration, dateTimeFormat);
+                                lastDuration, dateTimeFormat, deviceText, driveText);
 
             _pulseTimer = new System.Windows.Forms.Timer { Interval = 600 };
             _pulseTimer.Tick += (s, e) =>
@@ -62,10 +66,10 @@ namespace GwCopyPro.Forms
         /// <summary>Builds and lays out all child controls.</summary>
         private void InitializeComponent(
             int completedDisk, string completedFile, string nextFile,
-            TimeSpan lastDuration, string dtFmt)
+            TimeSpan lastDuration, string dtFmt, string deviceText, string driveText)
         {
             Text            = L10n.T("nextdisk.title");
-            Size            = new Size(560, 380);
+            Size            = new Size(560, 402);
             MaximumSize     = Size;
             MinimumSize     = Size;
             BackColor       = Color.FromArgb(18, 22, 32);
@@ -89,6 +93,12 @@ namespace GwCopyPro.Forms
                 new Font("Consolas", 10f, FontStyle.Bold),
                 Color.FromArgb(80, 215, 110));
             y += 28;
+
+            AddLabel(string.Format(L10n.T("nextdisk.device"), deviceText, driveText),
+                14, y, 520, 16,
+                new Font("Consolas", 8.5f, FontStyle.Bold),
+                Color.FromArgb(120, 190, 255));
+            y += 22;
 
             AddLabel(string.Format(L10n.T("nextdisk.done_file"), completedFile),
                 14, y, 520, 16,

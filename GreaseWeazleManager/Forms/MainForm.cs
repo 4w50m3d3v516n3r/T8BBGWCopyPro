@@ -302,7 +302,13 @@ namespace GwCopyPro.Forms
                         e.CompletedFile,
                         e.NextFile,
                         e.Duration,
-                        e.Job.DateTimeFormat);
+                        e.Job.DateTimeFormat,
+                        e.Job.Device != null
+                            ? $"{e.Job.Device.Name} ({e.Job.Device.SerialPort})"
+                            : L10n.T("job_dlg.auto_device"),
+                        string.IsNullOrWhiteSpace(e.Job.Parameters.Drive)
+                            ? L10n.T("nextdisk.drive_auto")
+                            : e.Job.Parameters.Drive);
 
                     dlg.ShowDialog(this);
                     e.Signal(dlg.Choice == NextDiskDialog.NextDiskResult.Go);

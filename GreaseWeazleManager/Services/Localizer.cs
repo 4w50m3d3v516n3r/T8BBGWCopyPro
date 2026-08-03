@@ -210,6 +210,8 @@ namespace GwCopyPro.Services
             ["preset.error_load"]      = "Could not load preset: {0}",
 
             ["nextdisk.title"]         = "Next Disk",
+            ["nextdisk.device"]        = "Device: {0} — drive {1}",
+            ["nextdisk.drive_auto"]    = "(auto)",
             ["nextdisk.done_disk"]     = "Disk #{0} completed successfully.",
             ["nextdisk.done_file"]     = "File: {0}",
             ["nextdisk.duration"]      = "Duration: {0:0.0} seconds",
@@ -404,6 +406,8 @@ namespace GwCopyPro.Services
             ["preset.error_load"]      = "Preset konnte nicht geladen werden: {0}",
 
             ["nextdisk.title"]         = "Nächste Diskette",
+            ["nextdisk.device"]        = "Gerät: {0} — Laufwerk {1}",
+            ["nextdisk.drive_auto"]    = "(auto)",
             ["nextdisk.done_disk"]     = "Diskette #{0} erfolgreich abgeschlossen.",
             ["nextdisk.done_file"]     = "Datei: {0}",
             ["nextdisk.duration"]      = "Dauer: {0:0.0} Sekunden",
