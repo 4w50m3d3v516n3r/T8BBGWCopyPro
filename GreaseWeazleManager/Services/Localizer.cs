@@ -53,6 +53,8 @@ namespace GwCopyPro.Services
             ["status.job_error"]       = "✗ Error: {0}",
             ["status.exception"]       = "Exception: {0}",
             ["status.jobs_count"]      = "{0} total, {1} running",
+            ["status.batch_running"]   = "Batch {0} running on {1} drive(s)…",
+            ["status.group_done"]      = "✓ Group job finished — {0} disk(s) imaged.",
 
             ["nodev.label"]            = "No devices added. Click ⬡ Devices to add a GreaseWeazle.",
 
@@ -274,6 +276,8 @@ namespace GwCopyPro.Services
             ["status.job_error"]       = "✗ Fehler: {0}",
             ["status.exception"]       = "Ausnahme: {0}",
             ["status.jobs_count"]      = "{0} gesamt, {1} aktiv",
+            ["status.batch_running"]   = "Stapel {0} läuft auf {1} Laufwerk(en)…",
+            ["status.group_done"]      = "✓ Gruppenauftrag beendet — {0} Diskette(n) abgebildet.",
 
             ["nodev.label"]            = "Keine Geräte hinzugefügt. Klicken Sie auf ⬡ Geräte.",
 

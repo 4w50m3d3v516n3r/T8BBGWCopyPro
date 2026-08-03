@@ -383,8 +383,11 @@ namespace GwCopyPro.Forms
         {
             using var dlg = new NewJobDialog(_devices, preselectedDevice);
             if (preset != null) dlg.LoadFromPreset(preset);
-            if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
-                StartJob(dlg.Result);
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                if (dlg.GroupResult != null) StartGroupJob(dlg.GroupResult);
+                else if (dlg.Result != null) StartJob(dlg.Result);
+            }
         }
 
         /// <summary>
@@ -427,6 +430,82 @@ namespace GwCopyPro.Forms
             Task.Run(async () =>
             {
                 try { await _gwService.RunJobAsync(job, cts.Token); }
+                catch (Exception ex)
+                {
+                    SafeInvoke(() => SetStatus(
+                        string.Format(L10n.T("status.exception"), ex.Message),
+                        Color.FromArgb(240, 80, 80)));
+                }
+            });
+        }
+
+        /// <summary>
+        /// Starts a group repetitive job: wires a <see cref="GroupJobService"/>, creates a
+        /// job panel per member, shows the <see cref="BatchInsertDialog"/> before each
+        /// batch, and reports completion in the status bar.
+        /// </summary>
+        /// <param name="group">The group job to run.</param>
+        private void StartGroupJob(GroupRepetitiveJob group)
+        {
+            var cts = new CancellationTokenSource();
+            _cts.Add(cts);
+
+            var service = new GroupJobService(_gwService);
+            var prober  = new DriveProber(_gwService.GwExePath);
+
+            service.MemberJobsCreated += (s, e) => SafeInvoke(() =>
+            {
+                foreach (var m in e.Group.Members)
+                {
+                    var job = m.Job!;
+                    _jobs.Add(job);
+                    var member = m;
+                    var panel = new JobPanel(job,
+                        cancelJob => member.BatchCts?.Cancel(),
+                        logJob =>
+                        {
+                            if (Directory.Exists(logJob.LogFolder))
+                                System.Diagnostics.Process.Start("explorer.exe", logJob.LogFolder);
+                            else
+                                MessageBox.Show(
+                                    L10n.T("job.log_unavailable"),
+                                    L10n.T("job.log_caption"),
+                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        },
+                        restartJob => { });
+                    _jobPanels[job.Id] = panel;
+                    _jobsFlow.Controls.Add(panel);
+                }
+                UpdateJobCount();
+            });
+
+            service.BatchPromptRequested += (s, e) => SafeInvoke(() =>
+            {
+                using var dlg = new BatchInsertDialog(e.Group, prober);
+                dlg.ShowDialog(this);
+                if (dlg.StartBatchChosen)
+                    SetStatus(string.Format(L10n.T("status.batch_running"),
+                            e.Group.BatchNumber + 1,
+                            e.Group.Members.Count(m => m.IncludedThisBatch && m.Verified)),
+                        Color.FromArgb(100, 200, 255));
+                e.Signal(dlg.StartBatchChosen);
+            });
+
+            service.GroupCompleted += (s, e) => SafeInvoke(() =>
+            {
+                foreach (var m in e.Group.Members)
+                    if (m.Job != null && _jobPanels.TryGetValue(m.Job.Id, out var p))
+                        p.UpdateFromJob();
+                SetStatus(string.Format(L10n.T("status.group_done"),
+                        e.Group.Members.Sum(m => m.Job?.DisksCompleted ?? 0)),
+                    Color.FromArgb(80, 220, 100));
+                SoundService.PlaySuccess();
+                UpdateJobCount();
+            });
+
+            Task.Run(async () =>
+            {
+                try { await service.RunAsync(group, cts.Token); }
                 catch (Exception ex)
                 {
                     SafeInvoke(() => SetStatus(
