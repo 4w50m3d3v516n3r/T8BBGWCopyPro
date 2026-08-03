@@ -1,7 +1,7 @@
 # Design: Group Repetitive Jobs, Device Info in Next-Disk Dialog, Settings OK Button
 
 Date: 2026-08-03
-Status: Approved by user
+Status: Implemented
 
 ## Scope
 
