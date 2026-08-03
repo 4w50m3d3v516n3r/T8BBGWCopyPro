@@ -31,6 +31,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="GreaseWeazleManager.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     <PackageReference Include="System.Management" Version="8.0.0" />
