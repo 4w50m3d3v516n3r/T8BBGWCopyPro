@@ -14,6 +14,9 @@ Three changes to GWCopyPro (WinForms .NET 8 front-end for gw.exe):
    parallel, with an LED-guided insert sequence and per-batch drive exclusion.
 3. In the Settings dialog, after saving, the Cancel button reads a localized
    "OK" instead of "Cancel".
+4. Each device tile in the main window's device strip gets a **Blink** button
+   that pulses the attached drive's LED, so the user can see which physical
+   drive belongs to which COM port.
 
 ## Decisions made during brainstorming
 
@@ -176,6 +179,21 @@ represented by one summary line in the status bar (batch number, disks done)
   `DialogResult` remains `Cancel`; closing behavior is unchanged.
 - If the user edits values again after saving, the button text stays "OK"
   (the last save persisted; the button only closes the dialog).
+
+## 7a. Device tile Blink button (identify drive)
+
+- `DevicePanel` gains a **Blink** button next to the Remove button (localized
+  key `dev.blink`), enabled only while the device is connected.
+- Clicking it invokes a callback provided by `MainForm` (same pattern as the
+  existing remove/new-job callbacks). `MainForm` runs the identify sequence
+  through `IDriveProber` on a background task: three blink pulses alternating
+  drive `0` and drive `1` (`gw seek --device COMx --drive N 0`, ~1.5 s cycle).
+  Pulsing both unit-select lines lights any single attached drive regardless
+  of whether it is addressed as 0/1 or a/b, so no drive selector is needed.
+- While the sequence runs, the tile's Blink button is disabled; the status bar
+  shows "Blinking <device> (<port>)…". If gw.exe fails (device busy because a
+  job is running, or unplugged), the status bar shows a localized error and
+  the button re-enables. Only one identify sequence runs at a time.
 
 ## 8. Error handling summary
 
