@@ -169,25 +169,7 @@ namespace GwCopyPro.Services
                 string file = FilePattern.Expand(job.FilePattern, job.DiskIndex,
                     job.DateTimeFormat);
 
-                string folder;
-                if (!string.IsNullOrWhiteSpace(job.OutputFolder))
-                {
-                    folder = Path.IsPathRooted(job.OutputFolder)
-                        ? job.OutputFolder
-                        : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, job.OutputFolder);
-                }
-                else if (!string.IsNullOrWhiteSpace(job.Parameters.ImageFile) &&
-                         Path.IsPathRooted(job.Parameters.ImageFile))
-                {
-                    folder = Path.GetDirectoryName(job.Parameters.ImageFile)!;
-                }
-                else
-                {
-                    folder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                }
-
-                if (!Path.IsPathRooted(file))
-                    file = Path.Combine(folder, file);
+                file = ResolveOutputFile(job.OutputFolder, job.Parameters.ImageFile, file);
 
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);
 
@@ -226,13 +208,44 @@ namespace GwCopyPro.Services
         }
 
         /// <summary>
+        /// Combines an expanded repetitive file name with the resolved output folder.
+        /// Folder precedence: absolute <paramref name="outputFolder"/>; relative folder
+        /// under the application base directory; the directory of
+        /// <paramref name="currentImageFile"/> when rooted; the user's Desktop.
+        /// A rooted <paramref name="fileName"/> is returned unchanged.
+        /// </summary>
+        internal static string ResolveOutputFile(string outputFolder,
+            string? currentImageFile, string fileName)
+        {
+            if (Path.IsPathRooted(fileName)) return fileName;
+
+            string folder;
+            if (!string.IsNullOrWhiteSpace(outputFolder))
+            {
+                folder = Path.IsPathRooted(outputFolder)
+                    ? outputFolder
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, outputFolder);
+            }
+            else if (!string.IsNullOrWhiteSpace(currentImageFile) &&
+                     Path.IsPathRooted(currentImageFile))
+            {
+                folder = Path.GetDirectoryName(currentImageFile)!;
+            }
+            else
+            {
+                folder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            }
+            return Path.Combine(folder, fileName);
+        }
+
+        /// <summary>
         /// Launches <c>gw.exe</c> for a single disk, streams its output through the log and
         /// the track parser, runs post-actions on success, and fires the appropriate events.
         /// </summary>
         /// <param name="job">The job to execute for one disk.</param>
         /// <param name="ct">Cancellation token; kills the process and marks the job cancelled.</param>
         /// <returns><see langword="true"/> on success; <see langword="false"/> on error or cancellation.</returns>
-        private async Task<bool> RunSingleDiskAsync(GwJob job, CancellationToken ct)
+        internal async Task<bool> RunSingleDiskAsync(GwJob job, CancellationToken ct)
         {
             job.Status = JobStatus.Running;
 
@@ -365,7 +378,7 @@ namespace GwCopyPro.Services
         /// before starting a new disk in repetitive mode.
         /// </summary>
         /// <param name="job">The job whose track grid should be cleared.</param>
-        private static void ResetTracks(GwJob job)
+        internal static void ResetTracks(GwJob job)
         {
             for (int c = 0; c < 84; c++)
                 for (int h = 0; h < 2; h++)
