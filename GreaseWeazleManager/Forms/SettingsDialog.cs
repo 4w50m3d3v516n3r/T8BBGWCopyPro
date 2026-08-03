@@ -16,6 +16,7 @@ namespace GwCopyPro.Forms
         private TextBox  txtGwPath   = null!;
         private ComboBox cmbLanguage = null!;
         private Label    lblSaved    = null!;
+        private Button   btnCancel   = null!;
 
         /// <summary>
         /// Initialises the dialog and populates controls with the current <see cref="AppSettings"/> values.
@@ -130,7 +131,7 @@ namespace GwCopyPro.Forms
             btnSave.Click += BtnSave_Click;
             Controls.Add(btnSave);
 
-            var btnCancel = MakeBtn(L10n.T("settings.cancel"), 452, y - 2, 86, 28,
+            btnCancel = MakeBtn(L10n.T("settings.cancel"), 452, y - 2, 86, 28,
                 Color.FromArgb(50, 25, 25), Color.FromArgb(200, 100, 100), Color.FromArgb(100, 50, 50));
             btnCancel.DialogResult = DialogResult.Cancel;
             Controls.Add(btnCancel);
@@ -161,6 +162,7 @@ namespace GwCopyPro.Forms
             L10n.SetLanguage(s.Language);
 
             lblSaved.Text = L10n.T("settings.saved");
+            btnCancel.Text = L10n.T("settings.ok");
 
             var t = new System.Windows.Forms.Timer { Interval = 2000 };
             t.Tick += (ts, te) => { lblSaved.Text = ""; t.Stop(); t.Dispose(); };

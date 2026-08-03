@@ -76,6 +76,7 @@ namespace GwCopyPro.Services
             ["settings.save"]          = "Save",
             ["settings.cancel"]        = "Cancel",
             ["settings.saved"]         = "Settings saved.",
+            ["settings.ok"]            = "OK",
 
             ["devmgr.title"]           = "Device Manager",
             ["devmgr.heading"]         = "Connected GreaseWeazle Devices",
@@ -269,6 +270,7 @@ namespace GwCopyPro.Services
             ["settings.save"]          = "Speichern",
             ["settings.cancel"]        = "Abbrechen",
             ["settings.saved"]         = "Einstellungen gespeichert.",
+            ["settings.ok"]            = "OK",
 
             ["devmgr.title"]           = "Geräteverwaltung",
             ["devmgr.heading"]         = "Verbundene GreaseWeazle-Geräte",
