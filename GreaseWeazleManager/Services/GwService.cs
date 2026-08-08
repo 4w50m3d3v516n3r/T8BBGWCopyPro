@@ -94,6 +94,14 @@ namespace GwCopyPro.Services
     /// Orchestrates gw.exe process execution, output parsing, track-grid updates,
     /// post-action execution, and repetitive-mode looping for <see cref="GwJob"/> instances.
     /// </summary>
+    /// <remarks>
+    /// All events below are raised from whichever thread is awaiting <see cref="RunJobAsync"/>
+    /// or <see cref="RunSingleDiskAsync"/> (typically a background thread), and — for
+    /// <see cref="JobProgress"/>, <see cref="TrackUpdated"/>, and <see cref="DiskCompleted"/>
+    /// specifically — sometimes directly from a <see cref="System.Diagnostics.Process"/>
+    /// output/error data thread. Handlers that touch UI controls must marshal back to the
+    /// UI thread themselves (see <c>MainForm.SafeInvoke</c>).
+    /// </remarks>
     public class GwService
     {
         /// <summary>Full path to the <c>gw.exe</c> binary used for all operations.</summary>

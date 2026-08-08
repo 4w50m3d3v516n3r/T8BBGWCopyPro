@@ -194,6 +194,11 @@ A horizontal row of device cards, one per registered GreaseWeazle. Each card sho
 - the **connection status** (● Connected / ● Disconnected),
 - a **pulsing LED** — green and pulsing while connected, red when disconnected,
 - a **▶ New Job** button that opens the job dialog with this device pre-selected,
+- a **⚡ Blink** button that pulses the attached drive's LED three times, alternating
+  drive `0` and drive `1`, so you can tell which physical drive belongs to this card —
+  handy when several GreaseWeazles are connected. It's disabled while the device is
+  disconnected or while another identify sequence is already running; the status bar
+  shows *"Blinking `<device>` (`<port>`)…"* while it runs.
 - a **×** button that removes the device from the list.
 
 If no devices are registered, a hint text is shown instead:
@@ -201,6 +206,9 @@ If no devices are registered, a hint text is shown instead:
 
 <!-- SCREENSHOT: images/handbook/05-device-card.png -->
 ![devicetile](../images/doc_en/Device_tile.png)
+
+<!-- SCREENSHOT: images/handbook/05-device-card-blink.png -->
+*(Screenshot placeholder: a device card showing the new ⚡ Blink button next to ▶ New Job and ×.)*
 
 ### 5.3 The ACTIVE JOBS area
 
@@ -474,7 +482,9 @@ happened.
 ### 7.5 Tab "Repetitive"
 
 Described in detail in [chapter 9](#9-repetitive-mode--imaging-whole-boxes-of-disks).
-This tab also contains the **Preset Name** field used when saving presets.
+This tab also contains the **Preset Name** field used when saving presets, and the
+**Use device group** checkbox for running the job across several devices in parallel —
+see [9.3 Group Repetitive Jobs — Parallel Batch Imaging](#93-group-repetitive-jobs--parallel-batch-imaging).
 
 ---
 
@@ -556,9 +566,11 @@ GWCopyPro loops it disk after disk, numbering the files automatically.
 1. The job runs for disk #1 exactly like a normal job (including post-actions).
 2. When the disk completes, the **Next Disk dialog** appears:
 
-<!-- SCREENSHOT: images/handbook/09-next-disk.png -->
-![nextdisk](../images/doc_en/nextDisk.png)
+![NextDisk](../images/doc_en/NextDiskBatch_EN.png)
 
+   - a **`Device: <name> — drive <address>`** line identifying which GreaseWeazle and
+     drive produced this disk (and will produce the next one); the drive shows `(auto)`
+     if none was explicitly selected,
    - `✓ Disk #3 completed successfully.` — with the written file name and duration,
    - the file name the **next** disk will get,
    - a pulsing prompt: *"Insert next disk and press ▶ Go"*.
@@ -570,6 +582,90 @@ GWCopyPro loops it disk after disk, numbering the files automatically.
 The track grid resets for every disk, and each disk gets its **own log folder**
 (`…_disk1`, `…_disk2`, …). Post-actions run after **every** disk, with `{DiskIndex}`
 carrying the current number — ideal for per-disk validation or archiving.
+
+> This device/drive line only appears for **single-device** repetitive jobs. Group jobs
+> (below) never show the Next Disk dialog — the Batch Insert dialog carries the
+> per-device info instead.
+
+### 9.3 Group Repetitive Jobs — Parallel Batch Imaging
+
+For digitising a large collection faster, repetitive mode can target a **device group**
+instead of a single device: several GreaseWeazle devices image one batch of disks at the
+same time, guided by an LED blink-and-verify sequence so you always insert the right disk
+into the right drive.
+
+#### Setting up a group
+
+On the **Repetitive** tab, below the normal repetitive controls:
+
+1. Check **"Use device group (parallel batch imaging)"** — enabled only while Repetitive
+   mode is also checked. The single Device/Drive selectors elsewhere in the dialog are
+   disabled while a group is active; the group member list replaces them.
+2. For each drive you want in the group, pick a **Device** and a **Drive**
+   (`0` / `1` / `a` / `b`) and click **+ Add**; the pair is appended to the member list,
+   in the order the drives will blink. Select a row and click **− Remove** to take it out
+   again.
+3. A group needs **at least two members**, and the same physical GreaseWeazle device may
+   not appear twice — parallel imaging needs one device per drive, since `gw.exe` holds a
+   COM port exclusively.
+
+<!-- SCREENSHOT: images/handbook/09-group-newjob-tab.png -->
+![MassCopy](../images/doc_en/MassCopy_EN.png)
+
+Group configuration round-trips through job presets exactly like any other setting —
+including when a saved preset references a device that is no longer connected.
+
+#### The Batch Insert dialog
+
+Starting a group job — and again after every completed batch — opens the **Batch Insert
+dialog**, which replaces the ordinary Next Disk dialog for group jobs only:
+
+<!-- SCREENSHOT: images/handbook/09-group-batch-insert.png -->
+![MassCopybatch](../images/doc_en/MasssCopyStart_EN.png)
+
+- The header shows the batch number and a preview of the file names this batch will
+  produce.
+- One row per group member — device name, COM port and drive, an **include** checkbox,
+  and a status:
+
+| Status | Meaning |
+|---|---|
+| `waiting` | Not yet this row's turn to blink. |
+| `● INSERT DISK — LED blinking` | This drive's LED is pulsing now — insert a disk into it. |
+| `✓ disk detected` | You confirmed a disk is inserted in this drive. |
+| `— excluded` | This drive is skipped for the current batch. |
+
+  A row also shows the previous batch's outcome once available (`last: ✓ <filename>` or
+  `last: ✗ <error>`).
+
+- **Only one drive blinks at a time**, in member-list order, skipping excluded rows.
+  Click **✔ Disk inserted** once you've inserted a disk into the currently blinking
+  drive to advance immediately to the next included, unverified row. GWCopyPro does not
+  probe the drive for a disk before advancing — gw.exe has no reliable, dedicated way to
+  detect disk presence, so your confirmation is trusted as-is. If a drive turns out to be
+  empty or otherwise fails, that member's imaging simply reports an error without
+  blocking the rest of the batch (see below).
+- Unchecking **include** on the currently blinking row skips it immediately; re-checking
+  it later appends it back to the end of the blink queue — exclusion is per batch and
+  fully reversible.
+- **▶ Start batch** is enabled only once every included drive reads `disk detected`. All
+  included drives then image their disk **in parallel**, each getting its own job panel
+  and live track visualiser in the main window, exactly like a normal job.
+- If one drive's disk fails, the others are unaffected and keep imaging; the failure is
+  reported on that drive's row in the next batch, and its disk number is never reused for
+  a later disk.
+- **✕ Finish job** ends the group session at any point (also triggered by closing the
+  dialog); the job is then marked *Completed* with a summary of all disks written.
+
+Post-actions run per finished disk exactly as in a normal job, with `{DiskIndex}`
+carrying that disk's number.
+
+> **Tip:** you don't have to fill every drive on every batch — exclude a drive that's
+> temporarily empty (e.g. you haven't sorted its next disk yet) and re-include it on a
+> later batch.
+
+> **Cancelling a group job** stops every member's `gw.exe` process, just like cancelling
+> a normal job.
 
 ---
 
@@ -605,6 +701,13 @@ Open with **⚙ Settings**.
 |---|---|
 | **Path to gw.exe** | Full path to your `gw.exe`. Default is plain `gw.exe`, which works when the gw tools folder is on your `PATH`. Use **Browse…** to pick the file. |
 | **UI Language** | English or Deutsch. The change is applied on **Save**; some elements only refresh fully after restarting the application. |
+
+> After you click **Save**, the **Cancel** button relabels itself **OK** — a quick visual
+> confirmation that your changes were written to disk. It still just closes the dialog
+> (nothing is undone), so there is no separate "apply" step to remember.
+
+<!-- SCREENSHOT: images/handbook/11-settings-ok.png -->
+![SaveSettingsOK](../images/doc_en/Settings_OK_EN.png)
 
 Settings are stored in `%APPDATA%\GreaseWeazleManager\settings.json` and persist across
 sessions.
@@ -1129,11 +1232,20 @@ Everything GWCopyPro generates, explained in plain language. The first token is 
 | `gw read <options> <image>` | Read a physical disk into an image file. |
 | `gw write <options> <image>` | Write an image file onto a physical disk. |
 
-Other useful `gw.exe` commands (not generated by GWCopyPro, but good to know — run them in
-a terminal): `gw info` (device/firmware info), `gw convert` (convert image ↔ image),
-`gw erase` (bulk-erase a disk), `gw rpm` (measure drive speed), `gw clean` (head-cleaning
-cycle with a cleaning disk), `gw seek` (move the head), `gw reset`, `gw update` (firmware
-update).
+Other useful `gw.exe` commands (run them manually in a terminal for tasks GWCopyPro's UI
+doesn't cover): `gw info` (device/firmware info), `gw convert` (convert image ↔ image),
+`gw erase` (bulk-erase a disk), `gw clean` (head-cleaning cycle with a cleaning disk),
+`gw reset`, `gw update` (firmware update).
+
+GWCopyPro itself also calls one of these internally, outside of a read/write job:
+
+| Command | Used by |
+|---|---|
+| `gw seek --device COMx --drive N 0` | The **⚡ Blink** button on a device tile ([5.2](#52-the-devices-strip)) and the LED-guided insert sequence in [group repetitive jobs](#93-group-repetitive-jobs--parallel-batch-imaging) — selecting a drive lights its LED for the duration of the command, producing a visible blink when pulsed on a cycle. |
+
+There is no disk-presence check behind **✔ Disk inserted** in the Batch Insert dialog —
+gw.exe has no reliable, dedicated way to detect whether a disk is physically in a drive,
+so GWCopyPro trusts your confirmation directly and advances immediately.
 
 ### Parameters generated by GWCopyPro
 

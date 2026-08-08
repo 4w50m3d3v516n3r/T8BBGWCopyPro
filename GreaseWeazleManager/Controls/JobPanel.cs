@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using GwCopyPro.Models;
 using GwCopyPro.Services;
@@ -13,7 +12,7 @@ namespace GwCopyPro.Controls
     /// (one per head), a live log pane, and Cancel / View Log / Restart buttons.
     /// The border colour and a flash animation reflect the current job status.
     /// </summary>
-    public class JobPanel : Panel
+    public partial class JobPanel : UserControl
     {
         private const int LEFT_PAD  = 8;
         private const int RIGHT_COL = 230;
@@ -27,17 +26,7 @@ namespace GwCopyPro.Controls
         private const int SIDE1_Y   = 115;
         private const int PANEL_H   = 178;
 
-        private readonly GwJob            _job;
-        private readonly FloppyDiskControl _side0;
-        private readonly FloppyDiskControl _side1;
-        private readonly Label            _lblTitle;
-        private readonly Label            _lblStatus;
-        private readonly ProgressBar      _progress;
-        private readonly Button           _btnCancel;
-        private readonly Button           _btnLog;
-        private readonly Button           _btnRestart;
-        private readonly RichTextBox      _logBox;
-        private readonly System.Windows.Forms.Timer _flashTimer;
+        private readonly GwJob _job = new();
         private bool _flashState;
         private readonly Action<GwJob>? _cancelCallback;
         private readonly Action<GwJob>? _logCallback;
@@ -45,6 +34,13 @@ namespace GwCopyPro.Controls
 
         /// <summary>The <see cref="GwJob"/> this panel represents.</summary>
         public GwJob Job => _job;
+
+        /// <summary>Design-time-only constructor. Do not use at runtime.</summary>
+        public JobPanel()
+        {
+            InitializeComponent();
+            SetDoubleBuffered();
+        }
 
         /// <summary>
         /// Initialises the job panel, builds all child controls, and performs an initial
@@ -64,105 +60,19 @@ namespace GwCopyPro.Controls
             _logCallback     = logCallback;
             _restartCallback = restartCallback;
 
-            SetStyle(ControlStyles.OptimizedDoubleBuffer |
-                     ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.UserPaint, true);
+            InitializeComponent();
+            SetDoubleBuffered();
 
-            BackColor = Color.FromArgb(22, 26, 36);
-            Size      = new Size(PANEL_W, PANEL_H);
-            Margin    = new Padding(6, 6, 6, 0);
-
-            _lblTitle = new Label
-            {
-                Font      = new Font("Consolas", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(155, 195, 255),
-                AutoSize  = false,
-                Size      = new Size(LOG_X - LEFT_PAD - 4, 18),
-                Location  = new Point(LEFT_PAD, TITLE_Y),
-                BackColor = Color.Transparent
-            };
-
-            _lblStatus = new Label
-            {
-                Font      = new Font("Consolas", 8f),
-                ForeColor = Color.FromArgb(110, 165, 110),
-                AutoSize  = false,
-                Size      = new Size(LOG_X - LEFT_PAD - 4, 16),
-                Location  = new Point(LEFT_PAD, STATUS_Y),
-                BackColor = Color.Transparent
-            };
-
-            _progress = new ProgressBar
-            {
-                Location = new Point(LEFT_PAD, PROG_Y),
-                Size     = new Size(FloppyDiskControl.ControlWidth, PROG_H),
-                Minimum  = 0,
-                Maximum  = 100,
-                Style    = ProgressBarStyle.Continuous
-            };
-
-            _side0 = new FloppyDiskControl
-            {
-                Location  = new Point(LEFT_PAD, SIDE0_Y),
-                SideLabel = "Side 0  (Head 0 — Upper)"
-            };
-
-            _side1 = new FloppyDiskControl
-            {
-                Location  = new Point(LEFT_PAD, SIDE1_Y),
-                SideLabel = "Side 1  (Head 1 — Lower)",
-                Head      = 1
-            };
-
-            _side0.SetTracks(job.Tracks);
-            _side1.SetTracks(job.Tracks);
-
-            int btnW = RIGHT_COL - 12;
-
-            _btnCancel = MakeBtn(L10n.T("job.cancel"), LOG_X + 4, TITLE_Y,
-                btnW, 22,
-                Color.FromArgb(90, 25, 25), Color.FromArgb(240, 120, 120),
-                Color.FromArgb(160, 50, 50));
-            _btnCancel.Click += (s, e) => _cancelCallback?.Invoke(_job);
-
-            _btnLog = MakeBtn(L10n.T("job.view_log"), LOG_X + 4, TITLE_Y + 28,
-                btnW, 22,
-                Color.FromArgb(22, 45, 75), Color.FromArgb(130, 185, 255),
-                Color.FromArgb(50, 90, 160));
-            _btnLog.Click += (s, e) => _logCallback?.Invoke(_job);
-
-            _btnRestart = MakeBtn(L10n.T("job.restart"), LOG_X + 4, TITLE_Y + 56,
-                btnW, 22,
-                Color.FromArgb(40, 35, 12), Color.FromArgb(220, 185, 60),
-                Color.FromArgb(110, 95, 30));
-            _btnRestart.Click   += (s, e) => _restartCallback?.Invoke(_job);
-            _btnRestart.Enabled  = false;
-
-            _logBox = new RichTextBox
-            {
-                Location    = new Point(LOG_X + 4, TITLE_Y + 84),
-                Size        = new Size(btnW, PANEL_H - TITLE_Y - 84 - 6),
-                BackColor   = Color.FromArgb(12, 14, 20),
-                ForeColor   = Color.FromArgb(90, 195, 90),
-                Font        = new Font("Consolas", 6.5f),
-                ScrollBars  = RichTextBoxScrollBars.Vertical,
-                ReadOnly    = true,
-                BorderStyle = BorderStyle.None,
-                WordWrap    = false
-            };
-
-            Controls.AddRange(new Control[]
-            {
-                _lblTitle, _lblStatus, _progress,
-                _side0, _side1,
-                _btnCancel, _btnLog, _btnRestart, _logBox
-            });
-
-            _flashTimer = new System.Windows.Forms.Timer { Interval = 500 };
-            _flashTimer.Tick += (s, e) => { _flashState = !_flashState; Invalidate(); };
-
+            UpdateTrackVisualisers();
             UpdateDisplay();
         }
+
+        /// <summary>
+        /// Enables flicker-free custom drawing. Set here rather than in InitializeComponent
+        /// because the WinForms Designer's CodeDom reader cannot represent a bare method call.
+        /// </summary>
+        private void SetDoubleBuffered() => SetStyle(ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
 
         /// <summary>
         /// Refreshes all displayed values from the underlying <see cref="GwJob"/>.
@@ -173,9 +83,23 @@ namespace GwCopyPro.Controls
         {
             if (InvokeRequired) { Invoke(UpdateFromJob); return; }
 
+            UpdateTrackVisualisers();
+            UpdateProgressAndStatusColor();
+            AppendNewLogLines();
+            UpdateDisplay();
+            Invalidate();
+        }
+
+        /// <summary>Pushes the current per-track status grid into both head visualisers.</summary>
+        private void UpdateTrackVisualisers()
+        {
             _side0.SetTracks(_job.Tracks);
             _side1.SetTracks(_job.Tracks);
+        }
 
+        /// <summary>Updates the progress bar, status text/colour, and the flash-timer run state for the current job status.</summary>
+        private void UpdateProgressAndStatusColor()
+        {
             _progress.Value = Math.Max(0, Math.Min(100, (int)_job.ProgressPercent));
             _lblStatus.Text = _job.StatusText;
 
@@ -204,7 +128,11 @@ namespace GwCopyPro.Controls
                     _flashTimer.Stop();
                     break;
             }
+        }
 
+        /// <summary>Appends any log lines captured since the last update, colour-coded by content.</summary>
+        private void AppendNewLogLines()
+        {
             int existing = _logBox.Lines.Length;
             for (int i = existing; i < _job.LogLines.Count; i++)
             {
@@ -219,9 +147,6 @@ namespace GwCopyPro.Controls
                 _logBox.AppendText(line + "\n");
             }
             if (_job.LogLines.Count > existing) _logBox.ScrollToCaret();
-
-            UpdateDisplay();
-            Invalidate();
         }
 
         /// <summary>
@@ -239,6 +164,19 @@ namespace GwCopyPro.Controls
                 : "";
             _lblTitle.Text     = $"{icon}  [{device}]  {file}  │  {fmt}{diskInfo}";
             _btnCancel.Enabled = _job.Status == JobStatus.Running;
+        }
+
+        private void BtnCancel_Click(object? sender, EventArgs e) => _cancelCallback?.Invoke(_job);
+
+        private void BtnLog_Click(object? sender, EventArgs e) => _logCallback?.Invoke(_job);
+
+        private void BtnRestart_Click(object? sender, EventArgs e) => _restartCallback?.Invoke(_job);
+
+        /// <summary>Toggles the flashing state of the running-job border and repaints.</summary>
+        private void FlashTimer_Tick(object? sender, EventArgs e)
+        {
+            _flashState = !_flashState;
+            Invalidate();
         }
 
         /// <summary>
@@ -266,44 +204,6 @@ namespace GwCopyPro.Controls
             g.FillRectangle(accent, 0, 0, 4, Height);
             using var sep = new Pen(Color.FromArgb(38, 48, 68), 1f);
             g.DrawLine(sep, LOG_X, 4, LOG_X, Height - 4);
-        }
-
-        /// <summary>
-        /// Creates a flat-styled button with the given text, position, size, and colours.
-        /// </summary>
-        /// <param name="text">Button label.</param>
-        /// <param name="x">Left position.</param>
-        /// <param name="y">Top position.</param>
-        /// <param name="w">Width in pixels.</param>
-        /// <param name="h">Height in pixels.</param>
-        /// <param name="bg">Background colour.</param>
-        /// <param name="fg">Foreground (text) colour.</param>
-        /// <param name="border">Border colour.</param>
-        /// <returns>The configured <see cref="Button"/>.</returns>
-        private static Button MakeBtn(string text, int x, int y, int w, int h,
-            Color bg, Color fg, Color border)
-        {
-            var b = new Button
-            {
-                Text      = text,
-                Location  = new Point(x, y),
-                Size      = new Size(w, h),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = bg,
-                ForeColor = fg,
-                Font      = new Font("Consolas", 7.5f)
-            };
-            b.FlatAppearance.BorderColor = border;
-            return b;
-        }
-
-        /// <summary>
-        /// Stops and disposes the flash timer before releasing other resources.
-        /// </summary>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing) { _flashTimer?.Stop(); _flashTimer?.Dispose(); }
-            base.Dispose(disposing);
         }
     }
 }

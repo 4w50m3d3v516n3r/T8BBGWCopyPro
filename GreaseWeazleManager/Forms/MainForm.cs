@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -19,7 +18,7 @@ namespace GwCopyPro.Forms
     /// instances via <see cref="GwService"/>, and handles all service events (track updates,
     /// job completion, disk-prompt for repetitive mode).
     /// </summary>
-    public class MainForm : Form
+    public partial class MainForm : Form
     {
         private readonly List<GreaseWeazleDevice>      _devices   = new();
         private readonly List<GwJob>                   _jobs      = new();
@@ -27,20 +26,8 @@ namespace GwCopyPro.Forms
         private readonly GwService                     _gwService = new();
         private readonly Dictionary<string, JobPanel>  _jobPanels = new();
         private bool _blinkInProgress;
-
-        private Panel           _topBar      = null!;
-        private FlowLayoutPanel _deviceBar   = null!;
-        private FlowLayoutPanel _jobsFlow    = null!;
-        private Label           _lblGwPath   = null!;
-        private Label           _lblJobCount = null!;
-        private Label           _statusMsg   = null!;
-        private Label           _lblDevices  = null!;
-        private Label           _lblJobs     = null!;
-        private Button          _btnNewJob   = null!;
-        private Button          _btnDevices  = null!;
-        private Button          _btnSettings = null!;
-        private Button          _btnClear    = null!;
-        private System.Windows.Forms.Timer _statusTimer = null!;
+        private bool _errorFlash;
+        private System.Windows.Forms.Timer? _flashBorderTimer;
 
         /// <summary>
         /// Initialises the form, loads <see cref="AppSettings"/>, applies the saved language,
@@ -53,268 +40,106 @@ namespace GwCopyPro.Forms
             L10n.SetLanguage(settings.Language);
 
             InitializeComponent();
+            Icon = CreateAppIcon();
+            RefreshDeviceBar();
+            UpdateJobCount();
             WireEvents();
+            this.WindowState = FormWindowState.Maximized;
             Load += async (s, e) => await AutoDetectDevicesAsync();
         }
 
-        /// <summary>
-        /// Builds the top toolbar, device strip, jobs scroll area, and status bar and
-        /// adds them to the form in reverse dock order.
-        /// </summary>
-        private void InitializeComponent()
+        /// <summary>Paints the thin separator line at the bottom of the top toolbar.</summary>
+        private void TopBar_Paint(object? sender, PaintEventArgs e)
         {
-            Text        = L10n.T("app.title");
-            Size        = new Size(1120, 900);
-            MinimumSize = new Size(1060, 600);
-            BackColor   = Color.FromArgb(14, 16, 24);
-            ForeColor   = Color.FromArgb(180, 210, 255);
-            Icon        = CreateAppIcon();
+            using var pen = new Pen(Color.FromArgb(40, 80, 140), 1f);
+            e.Graphics.DrawLine(pen, 0, _topBar.Height - 1, _topBar.Width, _topBar.Height - 1);
+        }
 
-            _topBar = new Panel
-            {
-                Dock      = DockStyle.Top,
-                Height    = 52,
-                BackColor = Color.FromArgb(16, 20, 32)
-            };
-            _topBar.Paint += (s, e) =>
-            {
-                using var pen = new Pen(Color.FromArgb(40, 80, 140), 1f);
-                e.Graphics.DrawLine(pen, 0, _topBar.Height - 1, _topBar.Width, _topBar.Height - 1);
-            };
-
-            var lblTitle = new Label
-            {
-                Text      = "The8BitBox™ - Ilija Injac\nPresents - GW COPY PRO",
-                Font      = new Font("Consolas", 10f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(100, 180, 255),
-                AutoSize  = true,
-                Location  = new Point(14, 14),
-                BackColor = Color.Transparent
-            };
-
-            Button MakeTopBtn(string text, int x, Color bg, Color fg, Color border)
-            {
-                var b = new Button
-                {
-                    Text      = text,
-                    Location  = new Point(x, 12),
-                    Size      = new Size(148, 30),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = bg,
-                    ForeColor = fg,
-                    Font      = new Font("Consolas", 8.5f, FontStyle.Bold)
-                };
-                b.FlatAppearance.BorderColor = border;
-                return b;
-            }
-
-            _btnNewJob = MakeTopBtn(L10n.T("btn.new_job"), 320,
-                Color.FromArgb(20, 70, 40), Color.FromArgb(80, 230, 120), Color.FromArgb(50, 140, 80));
-            _btnNewJob.Click += BtnNewJob_Click;
-
-            _btnDevices = MakeTopBtn(L10n.T("btn.devices"), 478,
-                Color.FromArgb(20, 40, 80), Color.FromArgb(100, 160, 255), Color.FromArgb(50, 90, 180));
-            _btnDevices.Click += BtnDevices_Click;
-
-            _btnSettings = MakeTopBtn(L10n.T("btn.settings"), 636,
-                Color.FromArgb(40, 35, 20), Color.FromArgb(220, 180, 80), Color.FromArgb(120, 100, 40));
-            _btnSettings.Click += BtnSettings_Click;
-
-            _btnClear = MakeTopBtn(L10n.T("btn.clear_done"), 794,
-                Color.FromArgb(50, 25, 25), Color.FromArgb(220, 100, 100), Color.FromArgb(120, 50, 50));
-            _btnClear.Click += BtnClearDone_Click;
-
-            _topBar.Controls.AddRange(new Control[]
-                { lblTitle, _btnNewJob, _btnDevices, _btnSettings, _btnClear });
-
-            var deviceHeaderBar = new Panel
-            {
-                Dock      = DockStyle.Top,
-                Height    = 20,
-                BackColor = Color.FromArgb(14, 18, 28)
-            };
-            _lblDevices = new Label
-            {
-                Text      = L10n.T("app.devices"),
-                Font      = new Font("Consolas", 7f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(70, 100, 150),
-                AutoSize  = true,
-                Location  = new Point(10, 4),
-                BackColor = Color.Transparent
-            };
-            deviceHeaderBar.Controls.Add(_lblDevices);
-
-            _deviceBar = new FlowLayoutPanel
-            {
-                Dock          = DockStyle.Top,
-                Height        = 148,
-                BackColor     = Color.FromArgb(16, 18, 28),
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents  = false,
-                AutoScroll    = true,
-                Padding       = new Padding(6)
-            };
-            _deviceBar.Controls.Add(MakeNoDevLabel());
-
-            var jobsHeaderBar = new Panel
-            {
-                Dock      = DockStyle.Top,
-                Height    = 24,
-                BackColor = Color.FromArgb(16, 20, 32)
-            };
-            _lblJobs = new Label
-            {
-                Text      = L10n.T("app.active_jobs"),
-                Font      = new Font("Consolas", 7.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(70, 100, 150),
-                AutoSize  = true,
-                Location  = new Point(12, 5),
-                BackColor = Color.Transparent
-            };
-            _lblJobCount = new Label
-            {
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(55, 85, 125),
-                AutoSize  = true,
-                Location  = new Point(180, 5),
-                BackColor = Color.Transparent
-            };
-            jobsHeaderBar.Controls.AddRange(new Control[] { _lblJobs, _lblJobCount });
-
-            var jobsScroll = new Panel
-            {
-                Dock       = DockStyle.Fill,
-                BackColor  = Color.FromArgb(14, 16, 24),
-                AutoScroll = true
-            };
-            _jobsFlow = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents  = false,
-                AutoSize      = true,
-                AutoSizeMode  = AutoSizeMode.GrowAndShrink,
-                Padding       = new Padding(8),
-                BackColor     = Color.FromArgb(14, 16, 24)
-            };
-            jobsScroll.Controls.Add(_jobsFlow);
-
-            var statusBar = new Panel
-            {
-                Dock      = DockStyle.Bottom,
-                Height    = 24,
-                BackColor = Color.FromArgb(12, 16, 26)
-            };
-            _lblGwPath = new Label
-            {
-                Text      = string.Format(L10n.T("app.gw_path"), _gwService.GwExePath),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(75, 105, 145),
-                AutoSize  = true,
-                Location  = new Point(8, 5),
-                BackColor = Color.Transparent
-            };
-            _statusMsg = new Label
-            {
-                Text      = L10n.T("app.ready"),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(90, 175, 90),
-                AutoSize  = true,
-                Location  = new Point(420, 5),
-                BackColor = Color.Transparent
-            };
-            statusBar.Controls.AddRange(new Control[] { _lblGwPath, _statusMsg });
-
-            Controls.AddRange(new Control[]
-            {
-                jobsScroll,
-                jobsHeaderBar,
-                _deviceBar,
-                deviceHeaderBar,
-                _topBar,
-                statusBar
-            });
-
-            _statusTimer = new System.Windows.Forms.Timer { Interval = 4000 };
-            _statusTimer.Tick += (s, e) =>
-            {
-                _statusMsg.Text      = L10n.T("app.ready");
-                _statusMsg.ForeColor = Color.FromArgb(90, 175, 90);
-                _statusTimer.Stop();
-            };
-
-            UpdateJobCount();
+        /// <summary>Reverts the status label to "Ready" once the auto-clear timer elapses.</summary>
+        private void StatusTimer_Tick(object? sender, EventArgs e)
+        {
+            _statusMsg.Text      = L10n.T("app.ready");
+            _statusMsg.ForeColor = Color.FromArgb(90, 175, 90);
+            _statusTimer.Stop();
         }
 
         /// <summary>
-        /// Subscribes to all <see cref="GwService"/> events. Marshals each callback to the UI
-        /// thread and, for the <c>DiskCompleted</c> event, shows a <see cref="NextDiskDialog"/>
-        /// and signals the service to continue or stop.
+        /// Subscribes to all <see cref="GwService"/> events. Each handler marshals to the
+        /// UI thread via <see cref="SafeInvoke"/>.
         /// </summary>
         private void WireEvents()
         {
-            _gwService.JobStarted += (s, e) => SafeInvoke(() =>
-            {
-                SetStatus(string.Format(L10n.T("status.job_started"),
-                    e.Job.JobType, Path.GetFileName(e.Job.Parameters.ImageFile ?? "")),
-                    Color.FromArgb(100, 200, 255));
-                SoundService.PlayStart();
-                UpdateJobCount();
-            });
+            _gwService.JobStarted   += GwService_JobStarted;
+            _gwService.TrackUpdated += GwService_TrackUpdated;
+            _gwService.JobProgress  += GwService_JobProgress;
+            _gwService.JobCompleted += GwService_JobCompleted;
+            _gwService.JobError     += GwService_JobError;
+            _gwService.DiskCompleted += GwService_DiskCompleted;
+        }
 
-            _gwService.TrackUpdated += (s, e) => SafeInvoke(() =>
-            {
-                if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
-            });
+        private void GwService_JobStarted(object? sender, GwJobEventArgs e) => SafeInvoke(() =>
+        {
+            SetStatus(string.Format(L10n.T("status.job_started"),
+                e.Job.JobType, Path.GetFileName(e.Job.Parameters.ImageFile ?? "")),
+                Color.FromArgb(100, 200, 255));
+            SoundService.PlayStart();
+            UpdateJobCount();
+        });
 
-            _gwService.JobProgress += (s, e) => SafeInvoke(() =>
-            {
-                if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
-            });
+        private void GwService_TrackUpdated(object? sender, TrackUpdateEventArgs e) => SafeInvoke(() =>
+        {
+            if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+        });
 
-            _gwService.JobCompleted += (s, e) => SafeInvoke(() =>
-            {
-                if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
-                SetStatus(string.Format(L10n.T("status.job_done"),
-                    Path.GetFileName(e.Job.Parameters.ImageFile ?? "")),
-                    Color.FromArgb(80, 220, 100));
-                SoundService.PlaySuccess();
-                UpdateJobCount();
-            });
+        private void GwService_JobProgress(object? sender, GwJobEventArgs e) => SafeInvoke(() =>
+        {
+            if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+        });
 
-            _gwService.JobError += (s, e) => SafeInvoke(() =>
-            {
-                if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
-                SetStatus(string.Format(L10n.T("status.job_error"), e.Job.LastError),
-                    Color.FromArgb(240, 80, 80));
-                SoundService.PlayError();
-                FlashErrorBorder();
-                UpdateJobCount();
-            });
+        private void GwService_JobCompleted(object? sender, GwJobEventArgs e) => SafeInvoke(() =>
+        {
+            if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+            SetStatus(string.Format(L10n.T("status.job_done"),
+                Path.GetFileName(e.Job.Parameters.ImageFile ?? "")),
+                Color.FromArgb(80, 220, 100));
+            SoundService.PlaySuccess();
+            UpdateJobCount();
+        });
 
-            _gwService.DiskCompleted += (s, e) =>
-            {
-                SafeInvoke(() =>
-                {
-                    SoundService.PlaySuccess();
-                    if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+        private void GwService_JobError(object? sender, GwJobEventArgs e) => SafeInvoke(() =>
+        {
+            if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+            SetStatus(string.Format(L10n.T("status.job_error"), e.Job.LastError),
+                Color.FromArgb(240, 80, 80));
+            SoundService.PlayError();
+            FlashErrorBorder();
+            UpdateJobCount();
+        });
 
-                    using var dlg = new NextDiskDialog(
-                        e.DiskNumber,
-                        e.CompletedFile,
-                        e.NextFile,
-                        e.Duration,
-                        e.Job.DateTimeFormat,
-                        e.Job.Device != null
-                            ? $"{e.Job.Device.Name} ({e.Job.Device.SerialPort})"
-                            : L10n.T("job_dlg.auto_device"),
-                        string.IsNullOrWhiteSpace(e.Job.Parameters.Drive)
-                            ? L10n.T("nextdisk.drive_auto")
-                            : e.Job.Parameters.Drive);
+        private void GwService_DiskCompleted(object? sender, DiskCompletedEventArgs e) =>
+            SafeInvoke(() => ShowNextDiskDialogAndSignal(e));
 
-                    dlg.ShowDialog(this);
-                    e.Signal(dlg.Choice == NextDiskDialog.NextDiskResult.Go);
-                });
-            };
+        /// <summary>Updates the job panel, shows <see cref="NextDiskDialog"/>, and signals whether to continue.</summary>
+        private void ShowNextDiskDialogAndSignal(DiskCompletedEventArgs e)
+        {
+            SoundService.PlaySuccess();
+            if (_jobPanels.TryGetValue(e.Job.Id, out var p)) p.UpdateFromJob();
+
+            using var dlg = new NextDiskDialog(
+                e.DiskNumber,
+                e.CompletedFile,
+                e.NextFile,
+                e.Duration,
+                e.Job.DateTimeFormat,
+                e.Job.Device != null
+                    ? $"{e.Job.Device.Name} ({e.Job.Device.SerialPort})"
+                    : L10n.T("job_dlg.auto_device"),
+                string.IsNullOrWhiteSpace(e.Job.Parameters.Drive)
+                    ? L10n.T("nextdisk.drive_auto")
+                    : e.Job.Parameters.Drive);
+
+            dlg.ShowDialog(this);
+            e.Signal(dlg.Choice == NextDiskDialog.NextDiskResult.Go);
         }
 
         /// <summary>Opens <see cref="NewJobDialog"/> without a pre-selected device.</summary>
@@ -404,25 +229,8 @@ namespace GwCopyPro.Forms
 
             var panel = new JobPanel(job,
                 cancelJob => cts.Cancel(),
-                logJob =>
-                {
-                    if (Directory.Exists(logJob.LogFolder))
-                        System.Diagnostics.Process.Start("explorer.exe", logJob.LogFolder);
-                    else if (File.Exists(logJob.LogFile))
-                        System.Diagnostics.Process.Start("notepad.exe", logJob.LogFile);
-                    else
-                        MessageBox.Show(
-                            L10n.T("job.log_unavailable"),
-                            L10n.T("job.log_caption"),
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-                },
-                restartJob =>
-                {
-                    if (restartJob.SourcePreset != null)
-                        OpenNewJobDialog(restartJob.Device, restartJob.SourcePreset);
-                    else
-                        OpenNewJobDialog(restartJob.Device);
-                });
+                LogJobCallback,
+                restartJob => RestartJobCallback(restartJob));
 
             _jobPanels[job.Id] = panel;
             _jobsFlow.Controls.Add(panel);
@@ -440,6 +248,29 @@ namespace GwCopyPro.Forms
             });
         }
 
+        /// <summary>Opens the job's log folder/file in Explorer or Notepad, if available.</summary>
+        private void LogJobCallback(GwJob logJob)
+        {
+            if (Directory.Exists(logJob.LogFolder))
+                System.Diagnostics.Process.Start("explorer.exe", logJob.LogFolder);
+            else if (File.Exists(logJob.LogFile))
+                System.Diagnostics.Process.Start("notepad.exe", logJob.LogFile);
+            else
+                MessageBox.Show(
+                    L10n.T("job.log_unavailable"),
+                    L10n.T("job.log_caption"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>Reopens the New Job dialog pre-loaded from the job's source preset (or device only, if none).</summary>
+        private void RestartJobCallback(GwJob restartJob)
+        {
+            if (restartJob.SourcePreset != null)
+                OpenNewJobDialog(restartJob.Device, restartJob.SourcePreset);
+            else
+                OpenNewJobDialog(restartJob.Device);
+        }
+
         /// <summary>
         /// Starts a group repetitive job: wires a <see cref="GroupJobService"/>, creates a
         /// job panel per member, shows the <see cref="BatchInsertDialog"/> before each
@@ -454,55 +285,11 @@ namespace GwCopyPro.Forms
             var service = new GroupJobService(_gwService);
             var prober  = new DriveProber(_gwService.GwExePath);
 
-            service.MemberJobsCreated += (s, e) => SafeInvoke(() =>
-            {
-                foreach (var m in e.Group.Members)
-                {
-                    var job = m.Job!;
-                    _jobs.Add(job);
-                    var member = m;
-                    var panel = new JobPanel(job,
-                        cancelJob => member.BatchCts?.Cancel(),
-                        logJob =>
-                        {
-                            if (Directory.Exists(logJob.LogFolder))
-                                System.Diagnostics.Process.Start("explorer.exe", logJob.LogFolder);
-                            else
-                                MessageBox.Show(
-                                    L10n.T("job.log_unavailable"),
-                                    L10n.T("job.log_caption"),
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        },
-                        restartJob => { });
-                    _jobPanels[job.Id] = panel;
-                    _jobsFlow.Controls.Add(panel);
-                }
-                UpdateJobCount();
-            });
+            service.MemberJobsCreated += (s, e) => SafeInvoke(() => CreateGroupMemberPanels(e.Group));
 
-            service.BatchPromptRequested += (s, e) => SafeInvoke(() =>
-            {
-                using var dlg = new BatchInsertDialog(e.Group, prober);
-                dlg.ShowDialog(this);
-                if (dlg.StartBatchChosen)
-                    SetStatus(string.Format(L10n.T("status.batch_running"),
-                            e.Group.BatchNumber + 1,
-                            e.Group.Members.Count(m => m.IncludedThisBatch && m.Verified)),
-                        Color.FromArgb(100, 200, 255));
-                e.Signal(dlg.StartBatchChosen);
-            });
+            service.BatchPromptRequested += (s, e) => SafeInvoke(() => PromptForBatchInsert(e));
 
-            service.GroupCompleted += (s, e) => SafeInvoke(() =>
-            {
-                foreach (var m in e.Group.Members)
-                    if (m.Job != null && _jobPanels.TryGetValue(m.Job.Id, out var p))
-                        p.UpdateFromJob();
-                SetStatus(string.Format(L10n.T("status.group_done"),
-                        e.Group.Members.Sum(m => m.Job?.DisksCompleted ?? 0)),
-                    Color.FromArgb(80, 220, 100));
-                SoundService.PlaySuccess();
-                UpdateJobCount();
-            });
+            service.GroupCompleted += (s, e) => SafeInvoke(() => ReportGroupCompleted(e.Group));
 
             Task.Run(async () =>
             {
@@ -514,6 +301,51 @@ namespace GwCopyPro.Forms
                         Color.FromArgb(240, 80, 80)));
                 }
             });
+        }
+
+        /// <summary>Creates and registers a <see cref="JobPanel"/> for every member of a freshly created group batch.</summary>
+        private void CreateGroupMemberPanels(GroupRepetitiveJob group)
+        {
+            foreach (var m in group.Members)
+            {
+                var job = m.Job!;
+                _jobs.Add(job);
+                var member = m;
+                var panel = new JobPanel(job,
+                    cancelJob => member.BatchCts?.Cancel(),
+                    LogJobCallback,
+                    restartJob => { });
+                _jobPanels[job.Id] = panel;
+                _jobsFlow.Controls.Add(panel);
+            }
+            UpdateJobCount();
+        }
+
+        /// <summary>Shows the <see cref="BatchInsertDialog"/> for the next batch and signals whether it was started.</summary>
+        private void PromptForBatchInsert(BatchPromptEventArgs e)
+        {
+            var prober = new DriveProber(_gwService.GwExePath);
+            using var dlg = new BatchInsertDialog(e.Group, prober);
+            dlg.ShowDialog(this);
+            if (dlg.StartBatchChosen)
+                SetStatus(string.Format(L10n.T("status.batch_running"),
+                        e.Group.BatchNumber + 1,
+                        e.Group.Members.Count(m => m.IncludedThisBatch && m.Verified)),
+                    Color.FromArgb(100, 200, 255));
+            e.Signal(dlg.StartBatchChosen);
+        }
+
+        /// <summary>Refreshes all member job panels and reports the total disks completed in the status bar.</summary>
+        private void ReportGroupCompleted(GroupRepetitiveJob group)
+        {
+            foreach (var m in group.Members)
+                if (m.Job != null && _jobPanels.TryGetValue(m.Job.Id, out var p))
+                    p.UpdateFromJob();
+            SetStatus(string.Format(L10n.T("status.group_done"),
+                    group.Members.Sum(m => m.Job?.DisksCompleted ?? 0)),
+                Color.FromArgb(80, 220, 100));
+            SoundService.PlaySuccess();
+            UpdateJobCount();
         }
 
         /// <summary>
@@ -583,9 +415,9 @@ namespace GwCopyPro.Forms
         }
 
         /// <summary>
-        /// Runs a short identify sequence on the device: three blink pulses alternating
-        /// drive 0 and drive 1, covering both unit-select lines so any attached drive
-        /// lights regardless of its 0/1/a/b addressing. Only one sequence runs at a time.
+        /// Runs a short identify sequence on the device: one blink pulse each on drive 0 and
+        /// drive 1, covering both unit-select lines so any attached drive lights regardless of
+        /// its 0/1/a/b addressing. Only one sequence runs at a time.
         /// </summary>
         /// <param name="dev">The device whose drive should blink.</param>
         private void BlinkIdentify(GreaseWeazleDevice dev)
@@ -602,13 +434,9 @@ namespace GwCopyPro.Forms
                 bool ok = true;
                 try
                 {
-                    for (int i = 0; i < 3 && ok; i++)
-                    {
-                        await prober.BlinkOnceAsync(dev.SerialPort, "0", CancellationToken.None);
-                        await Task.Delay(350);
-                        await prober.BlinkOnceAsync(dev.SerialPort, "1", CancellationToken.None);
-                        await Task.Delay(350);
-                    }
+                    await prober.BlinkOnceAsync(dev.SerialPort, "0", CancellationToken.None);
+                    await Task.Delay(350);
+                    await prober.BlinkOnceAsync(dev.SerialPort, "1", CancellationToken.None);
                 }
                 catch { ok = false; }
 
@@ -664,9 +492,6 @@ namespace GwCopyPro.Forms
             _statusTimer.Start();
         }
 
-        private bool _errorFlash;
-        private System.Windows.Forms.Timer? _flashBorderTimer;
-
         /// <summary>
         /// Briefly flashes the form background red/dark to signal a job error.
         /// The flash runs for 4 cycles (8 timer ticks at 200 ms each) then resets.
@@ -706,8 +531,8 @@ namespace GwCopyPro.Forms
         /// <returns>The loaded <see cref="Icon"/>.</returns>
         private static Icon CreateAppIcon()
         {
-            Icon icon = Icon.ExtractAssociatedIcon(@"icon\favicon.ico");
-            return icon;
+            Icon? icon = Icon.ExtractAssociatedIcon(@"icon\favicon.ico");
+            return icon!;
         }
 
         /// <summary>Cancels all running jobs before the form closes.</summary>

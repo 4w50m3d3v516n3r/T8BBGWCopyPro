@@ -24,6 +24,7 @@ Der **GWCopyPro** stellt ein grafisches Frontend für `gw.exe` bereit, mit dem S
 * **mehrere GreaseWeazle-Geräte** gleichzeitig über separate COM-Ports verwalten
 * **Lese- und Schreibjobs** erstellen, in die Warteschlange stellen und mit einer Live-Track-Visualisierung überwachen
 * **repetitive Imaging-Sitzungen** durchführen — Diskette einlegen, imagen, wechseln, wiederholen — mit automatischer Dateibenennung
+* **Gruppen-Wiederholjobs** über mehrere Geräte parallel ausführen, geführt durch einen LED-gestützten Blink-und-Verifizieren-Arbeitsablauf beim Disketeneinlegen
 * **Post-Processing-Aktionen** (Programme, Batch-Skripte, PowerShell-Skripte) anhängen, die nach jedem erfolgreichen Job automatisch ausgeführt werden
 * **Job-Presets** speichern und laden, sodass häufige Konfigurationen (Formate, Track-Bereiche, Flags) nur einen Klick entfernt sind
 
@@ -59,6 +60,7 @@ Oder `GWCopyPro.sln` in Visual Studio 2022+ öffnen und **F5** drücken.
 
 * Beliebig viele GreaseWeazle-Geräte hinzufügen, jedes mit eigenem COM-Port und Anzeigenamen.
 * Pulsierende LED-Anzeige pro Gerät zeigt den aktuellen Verbindungsstatus (grün = verbunden, rot = getrennt).
+* Die Schaltfläche **⚡ Blinken** auf jeder Gerätekarte lässt die LED des angeschlossenen Laufwerks pulsieren (abwechselnd Laufwerk 0/1), damit Sie erkennen, welches physische Laufwerk an welchem COM-Port hängt — praktisch bei mehreren angeschlossenen GreaseWeazles.
 * Der **Geräte-Manager**-Dialog erlaubt das Hinzufügen, Entfernen und Aktualisieren von COM-Port-Zuweisungen zur Laufzeit — ohne Neustart der Anwendung.
 
 ### Multithread-Job-Ausführung
@@ -127,8 +129,22 @@ Konzipiert für Massen-Imaging (z. B. das Digitalisieren einer ganzen Diskettenb
 * **Repetitiven Modus** im Dialog „Neuer Job" aktivieren.
 * Ein **Dateimuster** mit optionalen Platzhaltern festlegen: `{n}`, `{n:D3}` (Zähler mit führenden Nullen), `{dt}` (Datums-/Zeitstempel).
 * **Ausgabeordner** und **Startindex** wählen.
-* Nach jeder abgeschlossenen Diskette fordert die App zum Einlegen der nächsten auf und fährt automatisch fort, wobei der Zähler hochgezählt wird.
+* Nach jeder abgeschlossenen Diskette fordert die App zum Einlegen der nächsten auf (mit Anzeige von Gerät und Laufwerk der zuletzt beschriebenen Diskette) und fährt automatisch fort, wobei der Zähler hochgezählt wird.
 * Eine Mustervorschau im Dialog zeigt, wie die Dateinamen aussehen werden (z. B. `Disk\_001\_20260101\_120000.scp`).
+
+### Gruppen-Wiederholjobs (paralleles Stapel-Imaging)
+
+Um größere Sammlungen schneller zu digitalisieren, kann der Wiederholungsmodus auf eine
+**Gerätegruppe** zielen — mehrere GreaseWeazle-Geräte imagen gleichzeitig einen Stapel
+Disketten:
+
+* Die Gruppe wird auf der Registerkarte „Wiederholen" im Dialog „Neuer Job" konfiguriert: jedes Geräte-/Laufwerks-Paar hinzufügen (mindestens 2 Mitglieder, kein Gerät doppelt).
+* Ein **Stapel-Einlege-Dialog** führt durch das Einlegen der Disketten: Die Laufwerke blinken nacheinander mit der LED; jedes wird mit **✔ Diskette eingelegt** bestätigt, sobald die App eine eingelegte Diskette verifiziert hat (`gw rpm`).
+* Ein Laufwerk kann für den aktuellen Stapel ausgeschlossen und später wieder einbezogen werden — der Ausschluss gilt jeweils nur für den aktuellen Stapel und ist reversibel.
+* Mit **▶ Stapel starten** beginnt das parallele Imaging, sobald jedes einbezogene Laufwerk „Diskette erkannt" meldet — jedes Laufwerk erhält dabei sein eigenes Job-Panel mit Track-Visualisierung.
+* Schlägt eine Diskette auf einem Laufwerk fehl, laufen die anderen unbeeinträchtigt weiter; der Fehler wird gemeldet, und die Diskettennummer wird nicht wiederverwendet.
+* Mit **✕ Auftrag beenden** wird die Gruppensitzung jederzeit beendet.
+* Die Gruppenkonfiguration wird wie jede andere Einstellung in Job-Presets gespeichert und geladen.
 
 ### Post-Aktionen (sequenziell)
 
@@ -169,6 +185,7 @@ Aktionen lassen sich umsortieren (▲ ▼), einzeln aktivieren/deaktivieren und 
 
 * **Pfad zu gw.exe** — auf die lokale Installation verweisen; standardmäßig wird `gw.exe` im `PATH` verwendet.
 * **Sprache** — Benutzeroberfläche auf Englisch oder Deutsch.
+* Nach dem Speichern beschriftet sich die Schaltfläche **Abbrechen** selbst als **OK** um, um die übernommenen Änderungen zu bestätigen.
 * Einstellungen werden als JSON unter `%APPDATA%\\GWCopyPro\\settings.json` gespeichert.
 
 ## Struktur des Log-Ordners

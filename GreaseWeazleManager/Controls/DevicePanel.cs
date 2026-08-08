@@ -13,26 +13,24 @@ namespace GwCopyPro.Controls
     /// and features a pulsing LED that animates while the device is connected.
     /// Provides buttons to start a new job or remove the device.
     /// </summary>
-    public class DevicePanel : Panel
+    public partial class DevicePanel : UserControl
     {
-        private readonly GreaseWeazleDevice   _device;
-        private readonly Label                _lblName;
-        private readonly Label                _lblPort;
-        private readonly Label                _lblFw;
-        private readonly Label                _lblConn;
-        private readonly PictureBox           _statusLight;
-        private readonly Button               _btnRemove;
-        private readonly Button               _btnNewJob;
-        private readonly Button               _btnBlink;
-        private readonly System.Windows.Forms.Timer _pulseTimer;
-        private Action<GreaseWeazleDevice>?   _removeCallback;
-        private Action<GreaseWeazleDevice>?   _newJobCallback;
-        private Action<GreaseWeazleDevice>?   _blinkCallback;
+        private readonly GreaseWeazleDevice _device = new();
+        private Action<GreaseWeazleDevice>? _removeCallback;
+        private Action<GreaseWeazleDevice>? _newJobCallback;
+        private Action<GreaseWeazleDevice>? _blinkCallback;
         private float _pulse    = 0f;
         private bool  _pulseDir = true;
 
         /// <summary>The <see cref="GreaseWeazleDevice"/> this panel represents.</summary>
         public GreaseWeazleDevice Device => _device;
+
+        /// <summary>Design-time-only constructor. Do not use at runtime.</summary>
+        public DevicePanel()
+        {
+            InitializeComponent();
+            SetDoubleBuffered();
+        }
 
         /// <summary>
         /// Initialises the device panel, building all child controls and starting
@@ -53,131 +51,55 @@ namespace GwCopyPro.Controls
             _newJobCallback = newJobCallback;
             _blinkCallback  = blinkCallback;
 
-            SetStyle(ControlStyles.OptimizedDoubleBuffer |
-                     ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.UserPaint, true);
-
-            BackColor = Color.FromArgb(20, 24, 34);
-            Size      = new Size(210, 136);
-            Margin    = new Padding(6);
-
-            _statusLight = new PictureBox
-            {
-                Location  = new Point(182, 10),
-                Size      = new Size(16, 16),
-                BackColor = Color.Transparent
-            };
-            _statusLight.Paint += StatusLight_Paint;
-
-            _lblName = new Label
-            {
-                Font      = new Font("Consolas", 8.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(160, 200, 255),
-                AutoSize  = false,
-                Size      = new Size(172, 18),
-                Location  = new Point(10, 12),
-                BackColor = Color.Transparent,
-                Text      = device.Name
-            };
-
-            _lblPort = new Label
-            {
-                Font      = new Font("Consolas", 8f),
-                ForeColor = Color.FromArgb(120, 150, 190),
-                AutoSize  = false,
-                Size      = new Size(190, 15),
-                Location  = new Point(10, 32),
-                BackColor = Color.Transparent,
-                Text      = $"Port: {device.SerialPort}"
-            };
-
-            _lblFw = new Label
-            {
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(90, 120, 150),
-                AutoSize  = false,
-                Size      = new Size(190, 15),
-                Location  = new Point(10, 49),
-                BackColor = Color.Transparent,
-                Text      = $"FW: {device.FirmwareVersion}"
-            };
-
-            _lblConn = new Label
-            {
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = device.IsConnected
-                                ? Color.FromArgb(80, 200, 100)
-                                : Color.FromArgb(200, 80, 80),
-                AutoSize  = false,
-                Size      = new Size(190, 14),
-                Location  = new Point(10, 66),
-                BackColor = Color.Transparent,
-                Text      = device.IsConnected
-                                ? L10n.T("dev.connected")
-                                : L10n.T("dev.disconnected")
-            };
-
-            _btnNewJob = new Button
-            {
-                Text      = L10n.T("dev.new_job"),
-                Location  = new Point(10, 84),
-                Size      = new Size(190, 22),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(18, 60, 32),
-                ForeColor = Color.FromArgb(90, 220, 120),
-                Font      = new Font("Consolas", 8f, FontStyle.Bold)
-            };
-            _btnNewJob.FlatAppearance.BorderColor = Color.FromArgb(40, 120, 65);
-            _btnNewJob.Click += (s, e) => _newJobCallback?.Invoke(_device);
-
-            _btnRemove = new Button
-            {
-                Text      = L10n.T("dev.remove"),
-                Location  = new Point(10, 110),
-                Size      = new Size(60, 18),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 20, 20),
-                ForeColor = Color.FromArgb(200, 80, 80),
-                Font      = new Font("Consolas", 8f)
-            };
-            _btnRemove.FlatAppearance.BorderColor = Color.FromArgb(100, 40, 40);
-            _btnRemove.Click += (s, e) => _removeCallback?.Invoke(_device);
-
-            _btnBlink = new Button
-            {
-                Text      = L10n.T("dev.blink"),
-                Location  = new Point(76, 110),
-                Size      = new Size(124, 18),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(40, 35, 20),
-                ForeColor = Color.FromArgb(220, 180, 80),
-                Font      = new Font("Consolas", 7.5f),
-                Enabled   = device.IsConnected
-            };
-            _btnBlink.FlatAppearance.BorderColor = Color.FromArgb(120, 100, 40);
-            _btnBlink.Click += (s, e) => _blinkCallback?.Invoke(_device);
-
-            Controls.AddRange(new Control[]
-            {
-                _lblName, _lblPort, _lblFw, _lblConn,
-                _btnNewJob, _btnRemove, _btnBlink, _statusLight
-            });
-
-            _pulseTimer = new System.Windows.Forms.Timer { Interval = 50 };
-            _pulseTimer.Tick += (s, e) =>
-            {
-                if (_pulseDir) _pulse += 0.06f; else _pulse -= 0.06f;
-                if (_pulse >= 1f) _pulseDir = false;
-                if (_pulse <= 0f) _pulseDir = true;
-                _statusLight.Invalidate();
-                _statusLight.Refresh();
-            };
+            InitializeComponent();
+            SetDoubleBuffered();
+            PopulateContent(device);
 
             if (device.IsConnected) _pulseTimer.Start();
         }
 
+        /// <summary>
+        /// Enables flicker-free custom drawing. Set here rather than in InitializeComponent
+        /// because the WinForms Designer's CodeDom reader cannot represent a bare method call.
+        /// </summary>
+        private void SetDoubleBuffered() => SetStyle(ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+
+        /// <summary>Fills in the per-instance text that InitializeComponent cannot know statically.</summary>
+        private void PopulateContent(GreaseWeazleDevice device)
+        {
+            _lblName.Text = device.Name;
+            _lblPort.Text = $"Port: {device.SerialPort}";
+            _lblFw.Text   = $"FW: {device.FirmwareVersion}";
+
+            _lblConn.ForeColor = device.IsConnected
+                ? Color.FromArgb(80, 200, 100)
+                : Color.FromArgb(200, 80, 80);
+            _lblConn.Text = device.IsConnected
+                ? L10n.T("dev.connected")
+                : L10n.T("dev.disconnected");
+
+            _btnBlink.Enabled = device.IsConnected;
+        }
+
         /// <summary>Disables the Blink button while an identify sequence runs on this device.</summary>
         public void SetBlinkBusy(bool busy) => _btnBlink.Enabled = !busy && _device.IsConnected;
+
+        private void BtnNewJob_Click(object? sender, EventArgs e) => _newJobCallback?.Invoke(_device);
+
+        private void BtnRemove_Click(object? sender, EventArgs e) => _removeCallback?.Invoke(_device);
+
+        private void BtnBlink_Click(object? sender, EventArgs e) => _blinkCallback?.Invoke(_device);
+
+        /// <summary>Advances the LED pulse animation by one step and repaints the status light.</summary>
+        private void PulseTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_pulseDir) _pulse += 0.06f; else _pulse -= 0.06f;
+            if (_pulse >= 1f) _pulseDir = false;
+            if (_pulse <= 0f) _pulseDir = true;
+            _statusLight.Invalidate();
+            _statusLight.Refresh();
+        }
 
         /// <summary>
         /// Paints the status LED as a filled ellipse whose green intensity pulses smoothly
@@ -207,19 +129,6 @@ namespace GwCopyPro.Controls
                 new Point(0, 0), new Point(Width, 0),
                 Color.FromArgb(60, 120, 200), Color.FromArgb(20, 50, 100));
             g.FillRectangle(accentBrush, 0, 0, Width, 3);
-        }
-
-        /// <summary>
-        /// Stops and disposes the pulse timer before releasing other resources.
-        /// </summary>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _pulseTimer?.Stop();
-                _pulseTimer?.Dispose();
-            }
-            base.Dispose(disposing);
         }
     }
 }

@@ -44,6 +44,33 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Update="Forms\SettingsDialog.Designer.cs">
+      <DependentUpon>SettingsDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\NextDiskDialog.Designer.cs">
+      <DependentUpon>NextDiskDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\DeviceManagerDialog.Designer.cs">
+      <DependentUpon>DeviceManagerDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\DevicePanel.Designer.cs">
+      <DependentUpon>DevicePanel.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\JobPanel.Designer.cs">
+      <DependentUpon>JobPanel.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\BatchInsertDialog.Designer.cs">
+      <DependentUpon>BatchInsertDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\PostActionDialog.Designer.cs">
+      <DependentUpon>PostActionDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\NewJobDialog.Designer.cs">
+      <DependentUpon>NewJobDialog.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings.settings">

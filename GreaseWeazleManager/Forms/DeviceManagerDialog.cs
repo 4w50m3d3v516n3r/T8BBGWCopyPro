@@ -14,16 +14,16 @@ namespace GwCopyPro.Forms
     /// <see cref="GreaseWeazleDevice"/> instances. Probes firmware via <c>gw.exe info</c>
     /// whenever a COM port is selected or a device is added manually.
     /// </summary>
-    public class DeviceManagerDialog : Form
+    public partial class DeviceManagerDialog : Form
     {
-        private readonly List<GreaseWeazleDevice> _devices;
-        private readonly string _gwExePath;
-        private ListView lvDevices    = null!;
-        private ComboBox cmbPort      = null!;
-        private TextBox  txtName      = null!;
-        private Label    lblFwProbe   = null!;
-        private Button   btnAdd       = null!;
-        private Button   btnAutoDetect = null!;
+        private readonly List<GreaseWeazleDevice> _devices = new();
+        private readonly string _gwExePath = string.Empty;
+
+        /// <summary>Design-time-only constructor. Do not use at runtime.</summary>
+        public DeviceManagerDialog()
+        {
+            InitializeComponent();
+        }
 
         /// <summary>
         /// Initialises the dialog with the application's device list and the path to gw.exe.
@@ -32,122 +32,11 @@ namespace GwCopyPro.Forms
         /// <param name="gwExePath">Path to <c>gw.exe</c> used for firmware probing.</param>
         public DeviceManagerDialog(List<GreaseWeazleDevice> devices, string gwExePath)
         {
-            _devices   = devices;
+            _devices = devices;
             _gwExePath = gwExePath;
             InitializeComponent();
-            RefreshList();
-        }
-
-        /// <summary>Builds all child controls and the device list view.</summary>
-        private void InitializeComponent()
-        {
-            Text            = L10n.T("devmgr.title");
-            Size            = new Size(660, 520);
-            BackColor       = Color.FromArgb(18, 22, 32);
-            ForeColor       = Color.FromArgb(180, 210, 255);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition   = FormStartPosition.CenterParent;
-            MaximizeBox     = false;
-
-            Controls.Add(new Label
-            {
-                Text      = L10n.T("devmgr.heading"),
-                Location  = new Point(10, 12),
-                AutoSize  = true,
-                Font      = new Font("Consolas", 10f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(160, 200, 255)
-            });
-
-            btnAutoDetect = MakeBtn(L10n.T("devmgr.auto_detect"), 430, 10, 210, 28,
-                Color.FromArgb(20, 50, 90), Color.FromArgb(100, 180, 255), Color.FromArgb(50, 100, 200));
-            btnAutoDetect.Click += BtnAutoDetect_Click;
-            Controls.Add(btnAutoDetect);
-
-            lvDevices = new ListView
-            {
-                Location      = new Point(10, 46),
-                Size          = new Size(624, 280),
-                View          = View.Details,
-                FullRowSelect = true,
-                BackColor     = Color.FromArgb(18, 22, 32),
-                ForeColor     = Color.FromArgb(180, 210, 255),
-                Font          = new Font("Consolas", 8.5f),
-                BorderStyle   = BorderStyle.FixedSingle
-            };
-            lvDevices.Columns.Add(L10n.T("devmgr.col_name"),   150);
-            lvDevices.Columns.Add(L10n.T("devmgr.col_port"),    70);
-            lvDevices.Columns.Add(L10n.T("devmgr.col_fw"),     110);
-            lvDevices.Columns.Add(L10n.T("devmgr.col_hwid"),   200);
-            lvDevices.Columns.Add(L10n.T("devmgr.col_status"),  80);
-            Controls.Add(lvDevices);
-
-            int y = 340;
-            Controls.Add(MakeLbl(L10n.T("devmgr.port"), 10, y + 4));
-            cmbPort = new ComboBox
-            {
-                Location      = new Point(60, y),
-                Size          = new Size(100, 22),
-                BackColor     = Color.FromArgb(28, 34, 48),
-                ForeColor     = Color.FromArgb(200, 230, 255),
-                FlatStyle     = FlatStyle.Flat,
-                Font          = new Font("Consolas", 8.5f),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
             PopulateComPorts();
-            cmbPort.SelectedIndexChanged += CmbPort_SelectedIndexChanged;
-            Controls.Add(cmbPort);
-
-            Controls.Add(MakeLbl(L10n.T("devmgr.name"), 175, y + 4));
-            txtName = new TextBox
-            {
-                Location    = new Point(225, y),
-                Size        = new Size(180, 22),
-                BackColor   = Color.FromArgb(28, 34, 48),
-                ForeColor   = Color.FromArgb(200, 230, 255),
-                BorderStyle = BorderStyle.FixedSingle,
-                Font        = new Font("Consolas", 8.5f),
-                Text        = "GreaseWeazle"
-            };
-            Controls.Add(txtName);
-
-            btnAdd = MakeBtn(L10n.T("devmgr.add"), 415, y, 90, 22,
-                Color.FromArgb(25, 60, 35), Color.FromArgb(100, 220, 130), Color.FromArgb(50, 120, 70));
-            btnAdd.Click += BtnAdd_Click;
-            Controls.Add(btnAdd);
-
-            y += 30;
-            lblFwProbe = new Label
-            {
-                Location  = new Point(10, y),
-                Size      = new Size(624, 18),
-                Font      = new Font("Consolas", 8f),
-                ForeColor = Color.FromArgb(100, 160, 220),
-                BackColor = Color.Transparent,
-                Text      = L10n.T("devmgr.probe_hint")
-            };
-            Controls.Add(lblFwProbe);
-
-            y += 32;
-            var btnRemove = MakeBtn(L10n.T("devmgr.remove"), 10, y, 150, 26,
-                Color.FromArgb(60, 20, 20), Color.FromArgb(220, 80, 80), Color.FromArgb(100, 40, 40));
-            btnRemove.Click += (s, e) =>
-            {
-                if (lvDevices.SelectedItems.Count > 0)
-                {
-                    _devices.Remove((GreaseWeazleDevice)lvDevices.SelectedItems[0].Tag!);
-                    RefreshList();
-                }
-            };
-
-            var btnRefresh = MakeBtn(L10n.T("devmgr.refresh"), 170, y, 150, 26,
-                Color.FromArgb(25, 40, 70), Color.FromArgb(100, 160, 240), Color.FromArgb(50, 80, 140));
-            btnRefresh.Click += (s, e) => PopulateComPorts();
-
-            var btnClose = MakeBtn(L10n.T("devmgr.close"), 520, y, 114, 26,
-                Color.FromArgb(30, 40, 60), Color.White, Color.FromArgb(60, 80, 120));
-            btnClose.DialogResult = DialogResult.OK;
-
-            Controls.AddRange(new Control[] { btnRemove, btnRefresh, btnClose });
+            RefreshList();
         }
 
         /// <summary>
@@ -215,13 +104,24 @@ namespace GwCopyPro.Forms
             lblFwProbe.Text      = string.Format(L10n.T("devmgr.probing"), port);
             btnAdd.Enabled       = false;
 
-            string fw = await GwDetector.QueryFirmwareAsync(_gwExePath, port);
+            try
+            {
+                string fw = await GwDetector.QueryFirmwareAsync(_gwExePath, port);
 
-            lblFwProbe.ForeColor = fw.StartsWith("Error") || fw == "Unknown" || fw == "Timeout"
-                ? Color.FromArgb(220, 120, 60)
-                : Color.FromArgb(80, 220, 120);
-            lblFwProbe.Text = string.Format(L10n.T("devmgr.fw_result"), port, fw);
-            btnAdd.Enabled  = true;
+                lblFwProbe.ForeColor = fw.StartsWith("Error") || fw == "Unknown" || fw == "Timeout"
+                    ? Color.FromArgb(220, 120, 60)
+                    : Color.FromArgb(80, 220, 120);
+                lblFwProbe.Text = string.Format(L10n.T("devmgr.fw_result"), port, fw);
+            }
+            catch (Exception ex)
+            {
+                lblFwProbe.ForeColor = Color.FromArgb(230, 80, 80);
+                lblFwProbe.Text      = string.Format(L10n.T("devmgr.detect_error"), ex.Message);
+            }
+            finally
+            {
+                btnAdd.Enabled = true;
+            }
         }
 
         /// <summary>
@@ -241,21 +141,45 @@ namespace GwCopyPro.Forms
             lblFwProbe.ForeColor = Color.FromArgb(200, 180, 60);
             lblFwProbe.Text      = string.Format(L10n.T("devmgr.probing"), port);
 
-            string fw = await GwDetector.QueryFirmwareAsync(_gwExePath, port);
-
-            _devices.Add(new GreaseWeazleDevice
+            try
             {
-                Name            = string.IsNullOrWhiteSpace(txtName.Text) ? "GreaseWeazle" : txtName.Text,
-                SerialPort      = port,
-                IsConnected     = true,
-                FirmwareVersion = fw
-            });
-            RefreshList();
+                string fw = await GwDetector.QueryFirmwareAsync(_gwExePath, port);
 
-            lblFwProbe.ForeColor = Color.FromArgb(80, 220, 120);
-            lblFwProbe.Text      = string.Format(L10n.T("devmgr.added_manual"), port, fw);
-            btnAdd.Enabled       = true;
+                _devices.Add(new GreaseWeazleDevice
+                {
+                    Name            = string.IsNullOrWhiteSpace(txtName.Text) ? "GreaseWeazle" : txtName.Text,
+                    SerialPort      = port,
+                    IsConnected     = true,
+                    FirmwareVersion = fw
+                });
+                RefreshList();
+
+                lblFwProbe.ForeColor = Color.FromArgb(80, 220, 120);
+                lblFwProbe.Text      = string.Format(L10n.T("devmgr.added_manual"), port, fw);
+            }
+            catch (Exception ex)
+            {
+                lblFwProbe.ForeColor = Color.FromArgb(230, 80, 80);
+                lblFwProbe.Text      = string.Format(L10n.T("devmgr.detect_error"), ex.Message);
+            }
+            finally
+            {
+                btnAdd.Enabled = true;
+            }
         }
+
+        /// <summary>Removes the currently selected device from the list, if any, and refreshes the view.</summary>
+        private void BtnRemove_Click(object? sender, EventArgs e)
+        {
+            if (lvDevices.SelectedItems.Count > 0)
+            {
+                _devices.Remove((GreaseWeazleDevice)lvDevices.SelectedItems[0].Tag!);
+                RefreshList();
+            }
+        }
+
+        /// <summary>Re-scans the system's COM ports into the port combo box.</summary>
+        private void BtnRefresh_Click(object? sender, EventArgs e) => PopulateComPorts();
 
         /// <summary>Repopulates the COM port combo box with all ports currently available on the system.</summary>
         private void PopulateComPorts()
@@ -283,27 +207,6 @@ namespace GwCopyPro.Forms
                     : Color.FromArgb(180, 100, 100);
                 lvDevices.Items.Add(item);
             }
-        }
-
-        /// <summary>Creates a styled field-caption label.</summary>
-        private static Label MakeLbl(string text, int x, int y) => new()
-        {
-            Text = text, Location = new Point(x, y), AutoSize = true,
-            Font = new Font("Consolas", 8f), ForeColor = Color.FromArgb(130, 160, 200)
-        };
-
-        /// <summary>Creates a flat-styled button with the given position, size, and colours.</summary>
-        private static Button MakeBtn(string text, int x, int y, int w, int h,
-            Color bg, Color fg, Color border)
-        {
-            var b = new Button
-            {
-                Text = text, Location = new Point(x, y), Size = new Size(w, h),
-                FlatStyle = FlatStyle.Flat, BackColor = bg, ForeColor = fg,
-                Font = new Font("Consolas", 8f)
-            };
-            b.FlatAppearance.BorderColor = border;
-            return b;
         }
     }
 }

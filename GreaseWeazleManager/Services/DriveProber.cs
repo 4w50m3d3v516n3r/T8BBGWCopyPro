@@ -1,26 +1,15 @@
 using System;
 using System.Diagnostics;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace GwCopyPro.Services
 {
-    /// <summary>Outcome of a disk-presence probe on one drive.</summary>
-    public enum DiskProbeResult
-    {
-        /// <summary>gw.exe reported an RPM value — a spinning disk is present.</summary>
-        DiskPresent,
-        /// <summary>gw.exe ran but saw no index pulses — no disk (or lever open).</summary>
-        NoDisk,
-        /// <summary>gw.exe could not talk to the device (unplugged, port busy).</summary>
-        DeviceError
-    }
-
     /// <summary>
-    /// Blink and disk-presence operations on a single drive, used by the group-job
-    /// insert phase and the device-tile identify button.
+    /// Blink operations on a single drive, used by the group-job insert phase and the
+    /// device-tile identify button. gw.exe has no reliable way to detect whether a disk is
+    /// physically present in a drive, so disk presence is confirmed by the user, not probed.
     /// </summary>
     public interface IDriveProber
     {
@@ -29,9 +18,6 @@ namespace GwCopyPro.Services
         /// Call repeatedly to produce a visible blink.
         /// </summary>
         Task BlinkOnceAsync(string comPort, string drive, CancellationToken ct);
-
-        /// <summary>Runs <c>gw rpm</c> to check whether a disk is inserted.</summary>
-        Task<DiskProbeResult> ProbeDiskAsync(string comPort, string drive, CancellationToken ct);
     }
 
     /// <summary>
@@ -40,11 +26,6 @@ namespace GwCopyPro.Services
     /// </summary>
     public class DriveProber : IDriveProber
     {
-        private static readonly Regex RpmRegex =
-            new(@"\d+(\.\d+)?\s*rpm", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex NoIndexRegex =
-            new(@"no\s+index", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private readonly string _gwExePath;
 
         /// <summary>Initialises the prober with the path to gw.exe.</summary>
@@ -54,27 +35,6 @@ namespace GwCopyPro.Services
         public async Task BlinkOnceAsync(string comPort, string drive, CancellationToken ct)
             => await RunGwAsync($"seek --device {comPort} --drive {drive} 0",
                    timeoutMs: 4000, ct);
-
-        /// <inheritdoc/>
-        public async Task<DiskProbeResult> ProbeDiskAsync(string comPort, string drive,
-            CancellationToken ct)
-        {
-            var (exitCode, output) = await RunGwAsync(
-                $"rpm --device {comPort} --drive {drive}", timeoutMs: 8000, ct);
-            return InterpretProbeOutput(exitCode, output);
-        }
-
-        /// <summary>
-        /// Maps a <c>gw rpm</c> exit code and combined output to a <see cref="DiskProbeResult"/>.
-        /// An RPM figure means a disk is present; "no index" means the drive answered but is
-        /// empty; anything else failing is a device error.
-        /// </summary>
-        internal static DiskProbeResult InterpretProbeOutput(int exitCode, string output)
-        {
-            if (RpmRegex.IsMatch(output)) return DiskProbeResult.DiskPresent;
-            if (NoIndexRegex.IsMatch(output)) return DiskProbeResult.NoDisk;
-            return exitCode == 0 ? DiskProbeResult.NoDisk : DiskProbeResult.DeviceError;
-        }
 
         /// <summary>
         /// Runs gw.exe with the given arguments, returning exit code and combined output.

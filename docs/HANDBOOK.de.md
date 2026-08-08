@@ -205,6 +205,12 @@ zeigt:
 - eine **pulsierende LED** — grün pulsierend bei Verbindung, rot bei Trennung,
 - eine Schaltfläche **▶ Neue Aufgabe**, die den Aufgabendialog mit diesem Gerät
   vorausgewählt öffnet,
+- eine Schaltfläche **⚡ Blinken**, die die LED des angeschlossenen Laufwerks dreimal
+  pulsieren lässt, abwechselnd Laufwerk `0` und Laufwerk `1` — so erkennen Sie, welches
+  physische Laufwerk zu welcher Karte gehört, praktisch bei mehreren angeschlossenen
+  GreaseWeazles. Sie ist deaktiviert, solange das Gerät nicht verbunden ist oder bereits
+  eine andere Blinksequenz läuft; die Statusleiste zeigt währenddessen
+  *„Blinke `<Gerät>` (`<Port>`)…"*.
 - eine Schaltfläche **×**, die das Gerät aus der Liste entfernt.
 
 Sind keine Geräte registriert, erscheint stattdessen der Hinweis:
@@ -212,6 +218,10 @@ Sind keine Geräte registriert, erscheint stattdessen der Hinweis:
 
 <!-- SCREENSHOT: images/handbook/05-device-card.png -->
 > ![geraetekachel](../images/doc_de/kachel_GW.png)
+
+<!-- SCREENSHOT: images/handbook/05-device-card-blink.png -->
+*(Platzhalter für Screenshot: eine Gerätekarte mit der neuen Schaltfläche ⚡ Blinken neben
+▶ Neue Aufgabe und ×.)*
 
 ### 5.3 Der Bereich AKTIVE AUFGABEN
 
@@ -501,7 +511,9 @@ was passiert ist.
 
 Wird ausführlich in [Kapitel 9](#9-wiederholungsmodus--ganze-diskettenkisten-digitalisieren)
 beschrieben. Diese Registerkarte enthält außerdem das Feld **Preset Name**, das beim
-Speichern von Presets verwendet wird.
+Speichern von Presets verwendet wird, sowie das Kontrollkästchen **Gerätegruppe
+verwenden** für Aufgaben, die parallel über mehrere Geräte laufen — siehe
+[9.3 Gruppen-Wiederholjobs — paralleles Stapel-Imaging](#93-gruppen-wiederholjobs--paralleles-stapel-imaging).
 
 ---
 
@@ -588,9 +600,12 @@ Dateinummerierung.
    Folgeaktionen).
 2. Ist die Diskette fertig, erscheint der Dialog **Nächste Diskette**:
 
-<!-- SCREENSHOT: images/handbook/09-next-disk.png -->
-`![naechsteDisk](../images/doc_de/naechste_disk.png)
+<!-- SCREENSHOT: images/handbook/09-next-disk-device-line.png -->
+![Nächste](../images/doc_de/Nerxt_Disk_DE.png)
 
+   - eine Zeile **„Gerät: `<Name>` — Laufwerk `<Adresse>`"**, die anzeigt, welcher
+     GreaseWeazle und welches Laufwerk diese Diskette erzeugt hat (und die nächste
+     erzeugen wird); ohne explizite Auswahl steht dort „(auto)",
    - `✓ Diskette #3 erfolgreich abgeschlossen.` — mit geschriebenem Dateinamen und Dauer,
    - der Dateiname, den die **nächste** Diskette erhalten wird,
    - eine pulsierende Aufforderung: *„Nächste Diskette einlegen und ▶ Los drücken"*.
@@ -604,6 +619,98 @@ Das Spurraster wird für jede Diskette zurückgesetzt, und jede Diskette bekommt
 **eigenen Protokollordner** (`…_disk1`, `…_disk2`, …). Folgeaktionen laufen nach
 **jeder** Diskette, wobei `{DiskIndex}` die aktuelle Nummer enthält — ideal für
 Validierung oder Archivierung pro Diskette.
+
+> Diese Geräte-/Laufwerkszeile erscheint nur bei **Einzelgerät**-Wiederholjobs.
+> Gruppenaufträge (siehe unten) zeigen den Dialog „Nächste Diskette" nie — der
+> Stapel-Einlege-Dialog liefert die Geräteinformation pro Laufwerk stattdessen.
+
+### 9.3 Gruppen-Wiederholjobs — paralleles Stapel-Imaging
+
+Um größere Sammlungen schneller zu digitalisieren, kann der Wiederholungsmodus statt
+eines einzelnen Geräts eine **Gerätegruppe** ansteuern: Mehrere GreaseWeazle-Geräte
+imagen gleichzeitig einen Stapel Disketten, geführt durch eine LED-Blink-und-
+Verifizieren-Sequenz, damit Sie immer die richtige Diskette in das richtige Laufwerk
+einlegen.
+
+#### Eine Gruppe einrichten
+
+Auf der Registerkarte **Wiederholen**, unterhalb der normalen Wiederholungs-Bedienelemente:
+
+1. Aktivieren Sie **„Gerätegruppe verwenden (paralleles Stapel-Imaging)"** — nur
+   verfügbar, solange auch der Wiederholungsmodus aktiviert ist. Die einzelnen
+   Geräte-/Laufwerksauswahlfelder an anderer Stelle im Dialog werden deaktiviert, solange
+   eine Gruppe aktiv ist; die Mitgliederliste ersetzt sie.
+2. Wählen Sie für jedes gewünschte Laufwerk ein **Gerät** und ein **Laufwerk**
+   (`0` / `1` / `a` / `b`) und klicken Sie **+ Hinzufügen**; das Paar wird der
+   Mitgliederliste angehängt, in der Reihenfolge, in der die Laufwerke später blinken
+   werden. Zeile auswählen und **− Entfernen** klicken, um sie wieder zu entfernen.
+3. Eine Gruppe benötigt **mindestens zwei Mitglieder**, und dasselbe physische
+   GreaseWeazle-Gerät darf nicht doppelt vorkommen — paralleles Imaging benötigt ein
+   Gerät pro Laufwerk, da `gw.exe` einen COM-Port exklusiv belegt.
+
+<!-- SCREENSHOT: images/handbook/09-group-newjob-tab.png -->
+![Gruppe](../images/doc_de/MassCopy_DE.png)
+
+Die Gruppenkonfiguration wird wie jede andere Einstellung in Job-Presets gespeichert und
+geladen — auch wenn ein gespeichertes Preset auf ein nicht mehr verbundenes Gerät
+verweist.
+
+#### Der Stapel-Einlege-Dialog
+
+Beim Start eines Gruppenauftrags — und erneut nach jedem abgeschlossenen Stapel — öffnet
+sich der **Stapel-Einlege-Dialog**, der bei Gruppenaufträgen an die Stelle des
+gewöhnlichen Dialogs „Nächste Diskette" tritt:
+
+<!-- SCREENSHOT: images/handbook/09-group-batch-insert.png -->
+![MasseStart](../images/doc_de/MassCopyStart_DE.png)
+
+- Der Kopfbereich zeigt die Stapelnummer und eine Vorschau der Dateinamen, die dieser
+  Stapel erzeugen wird.
+- Eine Zeile pro Gruppenmitglied — Gerätename, COM-Port und Laufwerk, ein
+  **einbeziehen**-Kontrollkästchen sowie ein Status:
+
+| Status | Bedeutung |
+|---|---|
+| `wartet` | Diese Zeile ist noch nicht an der Reihe zu blinken. |
+| `● DISKETTE EINLEGEN — LED blinkt` | Die LED dieses Laufwerks pulsiert jetzt — Diskette einlegen. |
+| `✓ Diskette erkannt` | Sie haben bestätigt, dass in diesem Laufwerk eine Diskette liegt. |
+| `— ausgeschlossen` | Dieses Laufwerk wird im aktuellen Stapel übersprungen. |
+
+  Eine Zeile zeigt außerdem, sobald verfügbar, das Ergebnis des vorherigen Stapels
+  (`zuletzt: ✓ <Dateiname>` bzw. `zuletzt: ✗ <Fehler>`).
+
+- **Nur ein Laufwerk blinkt gleichzeitig**, in der Reihenfolge der Mitgliederliste,
+  ausgeschlossene Zeilen werden übersprungen. Klicken Sie **✔ Diskette eingelegt**,
+  sobald Sie eine Diskette in das gerade blinkende Laufwerk eingelegt haben, um sofort
+  zur nächsten einbezogenen, noch nicht verifizierten Zeile weiterzuspringen. GWCopyPro
+  prüft das Laufwerk vor dem Weiterspringen nicht auf eine eingelegte Diskette —
+  gw.exe hat keine zuverlässige, dedizierte Methode zur Diskettenerkennung, daher wird
+  Ihre Bestätigung direkt übernommen. Stellt sich ein Laufwerk als leer heraus oder
+  schlägt es anderweitig fehl, meldet nur dieses Mitglied einen Fehler, ohne den Rest
+  des Stapels zu blockieren (siehe unten).
+- Das Abwählen von **einbeziehen** bei der gerade blinkenden Zeile überspringt sie
+  sofort; erneutes Aktivieren hängt sie wieder ans Ende der Blink-Warteschlange an — der
+  Ausschluss gilt jeweils nur für den aktuellen Stapel und ist vollständig reversibel.
+- **▶ Stapel starten** wird erst aktiv, sobald jedes einbezogene Laufwerk „Diskette
+  erkannt" meldet. Alle einbezogenen Laufwerke imagen dann ihre Diskette **parallel**,
+  jedes mit eigenem Job-Panel und Live-Track-Visualisierung im Hauptfenster, genau wie
+  bei einer normalen Aufgabe.
+- Schlägt die Diskette eines Laufwerks fehl, laufen die anderen unbeeinträchtigt weiter;
+  der Fehler wird in der Zeile dieses Laufwerks im nächsten Stapel gemeldet, und die
+  Diskettennummer wird für eine spätere Diskette nie wiederverwendet.
+- **✕ Auftrag beenden** beendet die Gruppensitzung jederzeit (auch durch Schließen des
+  Dialogs ausgelöst); die Aufgabe wird dann als *abgeschlossen* markiert, mit einer
+  Zusammenfassung aller geschriebenen Disketten.
+
+Folgeaktionen laufen pro fertiggestellter Diskette genau wie bei einer normalen Aufgabe,
+wobei `{DiskIndex}` die Nummer dieser Diskette trägt.
+
+> **Tipp:** Sie müssen nicht bei jedem Stapel jedes Laufwerk befüllen — schließen Sie ein
+> Laufwerk aus, dessen nächste Diskette noch nicht bereitliegt, und beziehen Sie es bei
+> einem späteren Stapel wieder ein.
+
+> **Abbrechen eines Gruppenauftrags** beendet die `gw.exe`-Prozesse aller Mitglieder,
+> genau wie beim Abbrechen einer normalen Aufgabe.
 
 ---
 
@@ -641,6 +748,15 @@ beginnt jede Digitalisierungssitzung mit zwei Klicks.
 |---|---|
 | **Pfad zu gw.exe** | Vollständiger Pfad zu Ihrer `gw.exe`. Standard ist schlicht `gw.exe`, was funktioniert, wenn der gw-Tools-Ordner im `PATH` liegt. Mit **Durchsuchen…** wählen Sie die Datei aus. |
 | **Sprache** | English oder Deutsch. Die Änderung wird beim **Speichern** angewendet; einige Elemente aktualisieren sich erst nach einem Neustart der Anwendung vollständig. |
+
+> Nachdem Sie **Speichern** geklickt haben, beschriftet sich die Schaltfläche
+> **Abbrechen** selbst als **OK** um — eine kurze visuelle Bestätigung, dass Ihre
+> Änderungen auf die Festplatte geschrieben wurden. Sie schließt weiterhin nur den
+> Dialog (nichts wird rückgängig gemacht); es gibt also keinen separaten
+> „Übernehmen"-Schritt zu merken.
+
+<!-- SCREENSHOT: images/handbook/11-settings-ok.png -->
+![EinstellungenSpeichern](../images/doc_de/Save_settings_ok_De.png)
 
 Die Einstellungen werden in `%APPDATA%\GreaseWeazleManager\settings.json` gespeichert und
 bleiben über Sitzungen hinweg erhalten.
@@ -1176,11 +1292,23 @@ Alles, was GWCopyPro erzeugt, verständlich erklärt. Das erste Wort ist der **B
 | `gw read <Optionen> <Abbild>` | Eine physische Diskette in eine Abbilddatei einlesen. |
 | `gw write <Optionen> <Abbild>` | Eine Abbilddatei auf eine physische Diskette schreiben. |
 
-Weitere nützliche `gw.exe`-Befehle (werden von GWCopyPro nicht erzeugt, sind aber gut zu
-kennen — in einem Terminal ausführen): `gw info` (Geräte-/Firmware-Info), `gw convert`
-(Abbild ↔ Abbild konvertieren), `gw erase` (Diskette löschen), `gw rpm`
-(Laufwerksdrehzahl messen), `gw clean` (Reinigungszyklus mit einer Reinigungsdiskette),
-`gw seek` (Kopf positionieren), `gw reset`, `gw update` (Firmware-Update).
+Weitere nützliche `gw.exe`-Befehle (manuell in einem Terminal ausführen, für Aufgaben, die
+die Oberfläche von GWCopyPro nicht abdeckt): `gw info` (Geräte-/Firmware-Info),
+`gw convert` (Abbild ↔ Abbild konvertieren), `gw erase` (Diskette löschen), `gw clean`
+(Reinigungszyklus mit einer Reinigungsdiskette), `gw reset`, `gw update`
+(Firmware-Update).
+
+GWCopyPro ruft intern außerdem einen dieser Befehle selbst auf, außerhalb eines Lese-/
+Schreibauftrags:
+
+| Befehl | Verwendet von |
+|---|---|
+| `gw seek --device COMx --drive N 0` | Die Schaltfläche **⚡ Blinken** auf einer Gerätekarte ([5.2](#52-die-leiste-geräte)) und die LED-geführte Einlegesequenz in [Gruppen-Wiederholjobs](#93-gruppen-wiederholjobs--paralleles-stapel-imaging) — die Auswahl eines Laufwerks lässt dessen LED für die Dauer des Befehls leuchten, was bei zyklischem Aufruf ein sichtbares Blinken erzeugt. |
+
+Es gibt keine Diskettenerkennung hinter **✔ Diskette eingelegt** im
+Stapel-Einlege-Dialog — gw.exe hat keine zuverlässige, dedizierte Methode zur
+Diskettenerkennung, daher übernimmt GWCopyPro Ihre Bestätigung direkt und springt
+sofort weiter.
 
 ### Von GWCopyPro erzeugte Parameter
 

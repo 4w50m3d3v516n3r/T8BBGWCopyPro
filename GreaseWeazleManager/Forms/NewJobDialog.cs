@@ -15,9 +15,9 @@ namespace GwCopyPro.Forms
     /// (repetitive-mode file-pattern settings). Provides a live command-line preview
     /// and supports saving and loading <see cref="JobPreset"/> files.
     /// </summary>
-    public class NewJobDialog : Form
+    public partial class NewJobDialog : Form
     {
-        private readonly List<GreaseWeazleDevice> _devices;
+        private readonly List<GreaseWeazleDevice> _devices = new();
         private readonly GreaseWeazleDevice?      _preselectedDevice;
 
         /// <summary>Gets the <see cref="GwJob"/> created when the user clicks Start Job, or <see langword="null"/> if cancelled.</summary>
@@ -26,52 +26,12 @@ namespace GwCopyPro.Forms
         /// <summary>Gets the group job created when the user starts a device-group job, or <see langword="null"/>.</summary>
         public GroupRepetitiveJob? GroupResult { get; private set; }
 
-        private ComboBox      cmbDevice        = null!;
-        private ComboBox      cmbJobType       = null!;
-        private TextBox       txtImageFile      = null!;
-        private TextBox       txtFormat         = null!;
-        private NumericUpDown nudStartCyl       = null!;
-        private NumericUpDown nudEndCyl         = null!;
-        private ComboBox      cmbHead           = null!;
-        private NumericUpDown nudStep           = null!;
-        private CheckBox      chkHSwap          = null!;
-        private CheckBox      chkHead0Off       = null!;
-        private NumericUpDown nudHead0Off       = null!;
-        private CheckBox      chkHead1Off       = null!;
-        private NumericUpDown nudHead1Off       = null!;
-        private NumericUpDown nudRevs           = null!;
-        private ComboBox      cmbDensel         = null!;
-        private NumericUpDown nudBitrate        = null!;
-        private CheckBox      chkRetries        = null!;
-        private NumericUpDown nudRetries        = null!;
-        private CheckBox      chkNoClobber      = null!;
-        private CheckBox      chkRaw            = null!;
-        private CheckBox      chkReverse        = null!;
-        private CheckBox      chkHardSectors    = null!;
-        private CheckBox      chkErase          = null!;
-        private CheckBox      chkVerify         = null!;
-        private TextBox       txtPrecomp        = null!;
-        private CheckBox      chkGenTg43        = null!;
-        private CheckBox      chkReverseW       = null!;
-        private CheckBox      chkHardSectorsW   = null!;
-        private ComboBox      cmbDrive          = null!;
-        private TextBox       txtExtraArgs      = null!;
-        private Label         lblPreview        = null!;
-        private Label         lblTrackSpec      = null!;
-        private ListView      lvPostActions     = null!;
-        private CheckBox      chkRepetitive     = null!;
-        private TextBox       txtFilePattern    = null!;
-        private TextBox       txtOutputFolder   = null!;
-        private NumericUpDown nudStartIndex     = null!;
-        private TextBox       txtDtFormat       = null!;
-        private Label         lblPatternPreview = null!;
-        private TextBox       txtPresetName     = null!;
-        private CheckBox      chkUseGroup       = null!;
-        private ComboBox      cmbGroupDevice    = null!;
-        private ComboBox      cmbGroupDrive     = null!;
-        private ListView      lvGroupMembers    = null!;
-
         private bool _initialized;
+
+        /// <summary>Design-time-only constructor. Do not use at runtime.</summary>
+        public NewJobDialog() : this(new List<GreaseWeazleDevice>())
+        {
+        }
 
         /// <summary>
         /// Initialises the dialog, builds all controls, and optionally pre-selects a device.
@@ -83,391 +43,164 @@ namespace GwCopyPro.Forms
             _devices           = devices;
             _preselectedDevice = preselectedDevice;
             InitializeComponent();
+            ApplyLocalizedText();
+            PopulateGroupDeviceCombo();
             PopulateDevices();
             _initialized = true;
             UpdatePreview();
             UpdateTrackSpecLabel();
         }
 
-        /// <summary>Builds the tab control, all five tab pages, the preview bar, and the action buttons.</summary>
-        private void InitializeComponent()
+        /// <summary>
+        /// Re-applies every localised string over the (possibly English-literal) defaults baked
+        /// into InitializeComponent. This runs every time the dialog is constructed, so it stays
+        /// correct even if the WinForms Designer resaves NewJobDialog.Designer.cs and flattens its
+        /// L10n.T(...) calls back to literals the next time that file is opened and saved there —
+        /// a real, repeatedly-observed limitation of the Designer's CodeDom round-trip.
+        /// </summary>
+        private void ApplyLocalizedText()
         {
-            const int FORM_W     = 900;
-            const int FORM_H     = 820;
-            const int PAD        = 10;
-            const int TAB_H      = 630;
-            const int TAB_ITEM_H = 32;
-            const int TAB_ITEM_W = 190;
-            const int PREV_Y     = PAD + TAB_H + 8;
-            const int BTN_Y      = PREV_Y + 24 + 12;
-            const int BTN_H      = 36;
-            const int BTN_W_OK   = 160;
-            const int BTN_W_CAN  = 100;
+            Text = L10n.T("job_dlg.title");
 
-            Text            = L10n.T("job_dlg.title");
-            Size            = new Size(FORM_W, FORM_H);
-            MinimumSize     = new Size(FORM_W, FORM_H);
-            MaximumSize     = new Size(FORM_W, FORM_H);
-            BackColor       = Color.FromArgb(18, 22, 32);
-            ForeColor       = Color.FromArgb(180, 210, 255);
-            StartPosition   = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox     = false;
+            tabMain.Text        = L10n.T("job_dlg.tab_main");
+            tabTracks.Text      = L10n.T("job_dlg.tab_tracks");
+            tabAdvanced.Text    = L10n.T("job_dlg.tab_advanced");
+            tabPostActions.Text = L10n.T("job_dlg.tab_postactions");
+            tabRepeat.Text      = L10n.T("job_dlg.tab_repeat");
 
-            var tabs = new TabControl
-            {
-                Location = new Point(PAD, PAD),
-                Size     = new Size(FORM_W - PAD * 2, TAB_H),
-                DrawMode = TabDrawMode.OwnerDrawFixed,
-                ItemSize = new Size(TAB_ITEM_W, TAB_ITEM_H),
-                SizeMode = TabSizeMode.Fixed
-            };
-            tabs.DrawItem += Tabs_DrawItem;
+            // Main tab
+            lblDevice.Text     = L10n.T("job_dlg.device");
+            lblJobType.Text    = L10n.T("job_dlg.job_type");
+            ReplaceComboItems(cmbJobType, L10n.T("job_dlg.read"), L10n.T("job_dlg.write"));
+            lblImageFile.Text  = L10n.T("job_dlg.image_file");
+            lblDiskFormat.Text = L10n.T("job_dlg.disk_format");
+            lblCommonOptsHeader.Text = L10n.T("job_dlg.common_opts");
+            lblRevs.Text        = L10n.T("job_dlg.revs");
+            lblRevsHint.Text    = L10n.T("job_dlg.revs_hint");
+            lblDensel.Text      = L10n.T("job_dlg.densel");
+            lblBitrate.Text     = L10n.T("job_dlg.bitrate");
+            lblBitrateHint.Text = L10n.T("job_dlg.bitrate_hint");
+            lblReadOptsHeader.Text = L10n.T("job_dlg.read_opts");
+            chkRetries.Text     = L10n.T("job_dlg.retries");
+            chkNoClobber.Text   = L10n.T("job_dlg.no_clobber");
+            chkRaw.Text         = L10n.T("job_dlg.raw");
+            chkReverse.Text     = L10n.T("job_dlg.reverse_read");
+            chkHardSectors.Text = L10n.T("job_dlg.hard_sectors");
+            lblWriteOptsHeader.Text = L10n.T("job_dlg.write_opts");
+            chkErase.Text        = L10n.T("job_dlg.erase");
+            chkVerify.Text       = L10n.T("job_dlg.verify");
+            chkGenTg43.Text      = L10n.T("job_dlg.gen_tg43");
+            lblPrecomp.Text      = L10n.T("job_dlg.precomp");
+            chkReverseW.Text     = L10n.T("job_dlg.reverse_write");
+            chkHardSectorsW.Text = L10n.T("job_dlg.hard_sectors");
 
-            var tabMain        = new TabPage(L10n.T("job_dlg.tab_main"))        { BackColor = Color.FromArgb(22, 26, 36) };
-            var tabTracks      = new TabPage(L10n.T("job_dlg.tab_tracks"))      { BackColor = Color.FromArgb(22, 26, 36) };
-            var tabAdvanced    = new TabPage(L10n.T("job_dlg.tab_advanced"))    { BackColor = Color.FromArgb(22, 26, 36) };
-            var tabPostActions = new TabPage(L10n.T("job_dlg.tab_postactions")) { BackColor = Color.FromArgb(22, 26, 36) };
-            var tabRepeat      = new TabPage(L10n.T("job_dlg.tab_repeat"))      { BackColor = Color.FromArgb(22, 26, 36) };
+            // Tracks tab
+            lblTrackSelHeader.Text = L10n.T("job_dlg.track_sel_head");
+            lblTrackInfo.Text      = L10n.T("job_dlg.track_info");
+            lblCylinders.Text      = L10n.T("job_dlg.cylinders");
+            lblCylStart.Text       = L10n.T("job_dlg.cyl_start");
+            lblCylEnd.Text         = L10n.T("job_dlg.cyl_end");
+            lblCylHint.Text        = L10n.T("job_dlg.cyl_hint");
+            lblHeads.Text          = L10n.T("job_dlg.heads");
+            ReplaceComboItems(cmbHead, L10n.T("job_dlg.heads_both"), L10n.T("job_dlg.heads_0"), L10n.T("job_dlg.heads_1"));
+            lblStep.Text           = L10n.T("job_dlg.step");
+            lblStepHint.Text       = L10n.T("job_dlg.step_hint");
+            chkHSwap.Text          = L10n.T("job_dlg.hswap");
+            lblFlippyHeader.Text   = L10n.T("job_dlg.flippy_head");
+            chkHead0Off.Text       = L10n.T("job_dlg.h0off");
+            lblH0OffHint.Text      = L10n.T("job_dlg.h0off_hint");
+            chkHead1Off.Text       = L10n.T("job_dlg.h1off");
+            lblH1OffHint.Text      = L10n.T("job_dlg.h1off_hint");
 
-            BuildMainTab(tabMain);
-            BuildTracksTab(tabTracks);
-            BuildAdvancedTab(tabAdvanced);
-            BuildPostActionsTab(tabPostActions);
-            BuildRepeatTab(tabRepeat);
+            // Advanced tab
+            lblAdvHeader.Text = L10n.T("job_dlg.adv_head");
+            lblDrive.Text     = L10n.T("job_dlg.drive");
+            lblDriveHint.Text = L10n.T("job_dlg.drive_hint");
+            lblExtraArgs.Text = L10n.T("job_dlg.extra_args");
+            lblTokenNote.Text = L10n.T("job_dlg.token_note");
 
-            tabs.TabPages.AddRange(new[] { tabMain, tabTracks, tabAdvanced, tabPostActions, tabRepeat });
+            // Post-Actions tab
+            lblPaHint.Text        = L10n.T("job_dlg.pa_hint");
+            columnHeaderOrd.Text  = L10n.T("job_dlg.pa_col_ord");
+            columnHeaderName.Text = L10n.T("job_dlg.pa_col_name");
+            columnHeaderType.Text = L10n.T("job_dlg.pa_col_type");
+            columnHeaderExe.Text  = L10n.T("job_dlg.pa_col_exe");
+            columnHeaderArgs.Text = L10n.T("job_dlg.pa_col_args");
+            columnHeaderEn.Text   = L10n.T("job_dlg.pa_col_en");
+            btnAddAction.Text     = L10n.T("job_dlg.pa_add");
+            btnEditAction.Text    = L10n.T("job_dlg.pa_edit");
+            btnRemoveActionBtn.Text = L10n.T("job_dlg.pa_remove");
 
-            lblPreview = new Label
-            {
-                Location  = new Point(PAD, PREV_Y),
-                Size      = new Size(FORM_W - PAD * 2, 22),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(80, 180, 80),
-                BackColor = Color.FromArgb(12, 16, 22),
-                AutoSize  = false,
-                Padding   = new Padding(4, 3, 0, 0)
-            };
+            // Repeat tab
+            chkRepetitive.Text     = L10n.T("job_dlg.repeat_enabled");
+            lblOutputFolder.Text   = L10n.T("job_dlg.output_folder");
+            txtOutputFolder.PlaceholderText = L10n.T("job_dlg.output_folder_hint");
+            lblPatternHint.Text    = L10n.T("job_dlg.pattern_hint");
+            lblStartIndex.Text     = L10n.T("job_dlg.start_index");
+            lblDtFormat.Text       = L10n.T("job_dlg.dt_format");
+            lblDtFormatHint.Text   = L10n.T("job_dlg.dt_format_hint");
+            lblPatternPreviewCaption.Text = L10n.T("job_dlg.pattern_preview");
+            lblRepeatNote.Text     = L10n.T("job_dlg.repeat_note");
+            chkUseGroup.Text       = L10n.T("job_dlg.use_group");
+            btnGroupAdd.Text       = L10n.T("job_dlg.group_add");
+            btnGroupRemove.Text    = L10n.T("job_dlg.group_remove");
+            columnHeaderDevice.Text = L10n.T("job_dlg.group_col_device");
+            columnHeaderDrive.Text  = L10n.T("job_dlg.group_col_drive");
 
-            var sepLine = new Label
-            {
-                Location  = new Point(PAD, BTN_Y - 8),
-                Size      = new Size(FORM_W - PAD * 2, 1),
-                BackColor = Color.FromArgb(40, 60, 90)
-            };
-
-            var btnSavePreset = MakeBtn(L10n.T("preset.save"), PAD, BTN_Y, 160, BTN_H,
-                Color.FromArgb(20, 35, 65), Color.FromArgb(100, 160, 240), Color.FromArgb(50, 85, 155));
-            btnSavePreset.Click += BtnSavePreset_Click;
-
-            var btnLoadPreset = MakeBtn(L10n.T("preset.load"), PAD + 168, BTN_Y, 160, BTN_H,
-                Color.FromArgb(20, 35, 65), Color.FromArgb(100, 160, 240), Color.FromArgb(50, 85, 155));
-            btnLoadPreset.Click += BtnLoadPreset_Click;
-
-            var btnOk = MakeBtn(L10n.T("job_dlg.start_job"),
-                FORM_W - PAD - BTN_W_CAN - 10 - BTN_W_OK, BTN_Y, BTN_W_OK, BTN_H,
-                Color.FromArgb(20, 70, 40), Color.FromArgb(80, 230, 120), Color.FromArgb(50, 140, 80));
-            btnOk.Font         = new Font("Consolas", 9.5f, FontStyle.Bold);
-            btnOk.DialogResult = DialogResult.OK;
-            btnOk.Click       += BtnOk_Click;
-
-            var btnCancel = MakeBtn(L10n.T("job_dlg.cancel"),
-                FORM_W - PAD - BTN_W_CAN, BTN_Y, BTN_W_CAN, BTN_H,
-                Color.FromArgb(50, 25, 25), Color.FromArgb(200, 100, 100), Color.FromArgb(100, 50, 50));
-            btnCancel.Font         = new Font("Consolas", 9f);
-            btnCancel.DialogResult = DialogResult.Cancel;
-
-            Controls.AddRange(new Control[] { tabs, lblPreview, sepLine,
-                btnSavePreset, btnLoadPreset, btnOk, btnCancel });
-            AcceptButton = btnOk;
-            CancelButton = btnCancel;
+            // Bottom bar
+            btnSavePreset.Text = L10n.T("preset.save");
+            btnLoadPreset.Text = L10n.T("preset.load");
+            btnOk.Text         = L10n.T("job_dlg.start_job");
+            btnCancel.Text     = L10n.T("job_dlg.cancel");
         }
 
-        /// <summary>Populates the Main tab with device, job type, image file, format, and read/write option controls.</summary>
-        private void BuildMainTab(TabPage tab)
+        /// <summary>Replaces a ComboBox's items with localised text, preserving its current selection.</summary>
+        private static void ReplaceComboItems(ComboBox combo, params string[] items)
         {
-            int y = 14;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.device"), 10, y + 3));
-            cmbDevice = MkCombo(150, y, 360);
-            tab.Controls.Add(cmbDevice);
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.job_type"), 10, y + 3));
-            cmbJobType = MkCombo(150, y, 220);
-            cmbJobType.Items.AddRange(new object[] { L10n.T("job_dlg.read"), L10n.T("job_dlg.write") });
-            cmbJobType.SelectedIndex = 0;
-            cmbJobType.SelectedIndexChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(cmbJobType);
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.image_file"), 10, y + 3));
-            txtImageFile = MkTxt(150, y, 538);
-            txtImageFile.TextChanged += (s, e) => SafeUpdatePreviews();
-            var btnBrowse = MakeBtn("...", 696, y, 30, 22,
-                Color.FromArgb(30, 50, 80), Color.White, Color.FromArgb(60, 100, 160));
-            btnBrowse.Click += BtnBrowse_Click;
-            tab.Controls.AddRange(new Control[] { txtImageFile, btnBrowse });
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.disk_format"), 10, y + 3));
-            txtFormat = MkTxt(150, y, 180);
-            txtFormat.TextChanged += (s, e) => SafeUpdatePreviews();
-            var cmbFmtQuick = MkCombo(340, y, 390);
-            cmbFmtQuick.Items.AddRange(new object[] {
-                "ibm.1440","ibm.720","ibm.1200","ibm.360","ibm.180","ibm.320","ibm.800","ibm.2880",
-                "amiga.amigados","amiga.amigados-hd",
-                "atarist.360","atarist.400","atarist.720","atarist.800",
-                "atari.90","atari.130","atari.180","atari.360",
-                "commodore.1541","commodore.1571","commodore.1581",
-                "apple2.525.ss.sd.35","apple2.525.ss.sd.40","mac.400","mac.800",
-                "msx.1","msx.2",
-                "pc98.2hd","pc98.2dd","pc98.2d",
-                "acorn.adfs.s","acorn.adfs.m","acorn.adfs.l",
-                "acorn.adfs.d","acorn.adfs.e","acorn.adfs.f",
-                "dec.rx50","dec.rx33",
-                "ensoniq.mirage","ensoniq.esq1",
-                "gem.1","dragon.40","coco.35","zx.trdos.ds80",
-            });
-            cmbFmtQuick.SelectedIndexChanged += (s, e) =>
-            { if (cmbFmtQuick.SelectedItem != null) txtFormat.Text = cmbFmtQuick.SelectedItem.ToString(); };
-            tab.Controls.AddRange(new Control[] { txtFormat, cmbFmtQuick });
-
-            y += 44;
-            tab.Controls.Add(Sep(10, y, 750)); y += 8;
-            AddSectionHeader(tab, L10n.T("job_dlg.common_opts"), 10, y, Color.FromArgb(100, 160, 220)); y += 22;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.revs"), 10, y + 3));
-            nudRevs = MkNum(220, y, 70, 1, 10, 1);
-            nudRevs.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.revs_hint"), 300, y + 3));
-            tab.Controls.Add(nudRevs);
-
-            y += 30;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.densel"), 10, y + 3));
-            cmbDensel = MkCombo(220, y, 110);
-            cmbDensel.Items.AddRange(new object[] { "(auto)", "hd", "dd", "ed" });
-            cmbDensel.SelectedIndex = 0;
-            cmbDensel.SelectedIndexChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.bitrate"), 340, y + 3));
-            nudBitrate = MkNum(500, y, 100, 0, 2000000, 0);
-            nudBitrate.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.bitrate_hint"), 610, y + 3));
-            tab.Controls.AddRange(new Control[] { cmbDensel, nudBitrate });
-
-            y += 40;
-            tab.Controls.Add(Sep(10, y, 750)); y += 8;
-            AddSectionHeader(tab, L10n.T("job_dlg.read_opts"), 10, y, Color.FromArgb(60, 160, 240)); y += 22;
-
-            chkRetries = MkChk(L10n.T("job_dlg.retries"), 10, y + 2);
-            chkRetries.CheckedChanged += (s, e) => { nudRetries.Enabled = chkRetries.Checked; SafeUpdatePreviews(); };
-            nudRetries = MkNum(145, y, 70, 0, 99, 3);
-            nudRetries.Enabled = false;
-            nudRetries.ValueChanged += (s, e) => SafeUpdatePreviews();
-            chkNoClobber = MkChk(L10n.T("job_dlg.no_clobber"), 240, y + 2);
-            chkNoClobber.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            chkRaw = MkChk(L10n.T("job_dlg.raw"), 400, y + 2);
-            chkRaw.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.AddRange(new Control[] { chkRetries, nudRetries, chkNoClobber, chkRaw });
-
-            y += 28;
-            chkReverse = MkChk(L10n.T("job_dlg.reverse_read"), 10, y + 2);
-            chkReverse.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            chkHardSectors = MkChk(L10n.T("job_dlg.hard_sectors"), 280, y + 2);
-            chkHardSectors.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.AddRange(new Control[] { chkReverse, chkHardSectors });
-
-            y += 36;
-            tab.Controls.Add(Sep(10, y, 750)); y += 8;
-            AddSectionHeader(tab, L10n.T("job_dlg.write_opts"), 10, y, Color.FromArgb(220, 140, 40)); y += 22;
-
-            chkErase = MkChk(L10n.T("job_dlg.erase"), 10, y + 2);
-            chkErase.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            chkVerify = MkChk(L10n.T("job_dlg.verify"), 120, y + 2);
-            chkVerify.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            chkGenTg43 = MkChk(L10n.T("job_dlg.gen_tg43"), 240, y + 2);
-            chkGenTg43.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.AddRange(new Control[] { chkErase, chkVerify, chkGenTg43 });
-
-            y += 28;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.precomp"), 10, y + 3));
-            txtPrecomp = MkTxt(100, y, 100);
-            txtPrecomp.TextChanged += (s, e) => SafeUpdatePreviews();
-            chkReverseW = MkChk(L10n.T("job_dlg.reverse_write"), 220, y + 2);
-            chkReverseW.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            chkHardSectorsW = MkChk(L10n.T("job_dlg.hard_sectors"), 350, y + 2);
-            chkHardSectorsW.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.AddRange(new Control[] { txtPrecomp, chkReverseW, chkHardSectorsW });
+            int selected = combo.SelectedIndex;
+            combo.Items.Clear();
+            combo.Items.AddRange(items);
+            combo.SelectedIndex = selected;
         }
 
-        /// <summary>Populates the Tracks tab with cylinder range, head selection, step, hswap, and flippy head-offset controls.</summary>
-        private void BuildTracksTab(TabPage tab)
+        /// <summary>Populates the device-group combo box from <see cref="_devices"/> (dynamic, so it can't live in InitializeComponent).</summary>
+        private void PopulateGroupDeviceCombo()
         {
-            int y = 14;
-            AddSectionHeader(tab, L10n.T("job_dlg.track_sel_head"), 10, y, Color.FromArgb(160, 200, 255));
-            y += 26;
-
-            tab.Controls.Add(new Label
-            {
-                Text      = L10n.T("job_dlg.track_info"),
-                Location  = new Point(10, y),
-                Size      = new Size(760, 38),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(90, 130, 180),
-                BackColor = Color.Transparent
-            });
-            y += 46;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.cylinders"), 10, y + 3));
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.cyl_start"), 180, y + 3));
-            nudStartCyl = MkNum(230, y, 75, 0, 255, 0);
-            nudStartCyl.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.cyl_end"), 320, y + 3));
-            nudEndCyl = MkNum(360, y, 75, 0, 255, 79);
-            nudEndCyl.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.cyl_hint"), 450, y + 3));
-            tab.Controls.AddRange(new Control[] { nudStartCyl, nudEndCyl });
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.heads"), 10, y + 3));
-            cmbHead = MkCombo(180, y, 220);
-            cmbHead.Items.AddRange(new object[]
-            {
-                L10n.T("job_dlg.heads_both"),
-                L10n.T("job_dlg.heads_0"),
-                L10n.T("job_dlg.heads_1")
-            });
-            cmbHead.SelectedIndex = 0;
-            cmbHead.SelectedIndexChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(cmbHead);
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.step"), 10, y + 3));
-            nudStep = MkNum(180, y, 75, 1, 9, 1);
-            nudStep.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.step_hint"), 270, y + 3));
-            tab.Controls.Add(nudStep);
-
-            y += 34;
-            chkHSwap = MkChk(L10n.T("job_dlg.hswap"), 10, y + 2);
-            chkHSwap.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(chkHSwap);
-
-            y += 36;
-            tab.Controls.Add(Sep(10, y, 760)); y += 10;
-            AddSectionHeader(tab, L10n.T("job_dlg.flippy_head"), 10, y, Color.FromArgb(180, 140, 60));
-            y += 24;
-
-            chkHead0Off = MkChk(L10n.T("job_dlg.h0off"), 10, y + 2);
-            nudHead0Off = MkNum(100, y, 75, -9, 9, 0);
-            nudHead0Off.Enabled = false;
-            chkHead0Off.CheckedChanged += (s, e) => { nudHead0Off.Enabled = chkHead0Off.Checked; SafeUpdatePreviews(); };
-            nudHead0Off.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.h0off_hint"), 190, y + 3));
-            tab.Controls.AddRange(new Control[] { chkHead0Off, nudHead0Off });
-
-            y += 30;
-            chkHead1Off = MkChk(L10n.T("job_dlg.h1off"), 10, y + 2);
-            nudHead1Off = MkNum(100, y, 75, -9, 9, 0);
-            nudHead1Off.Enabled = false;
-            chkHead1Off.CheckedChanged += (s, e) => { nudHead1Off.Enabled = chkHead1Off.Checked; SafeUpdatePreviews(); };
-            nudHead1Off.ValueChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.h1off_hint"), 190, y + 3));
-            tab.Controls.AddRange(new Control[] { chkHead1Off, nudHead1Off });
-
-            y += 44;
-            lblTrackSpec = new Label
-            {
-                Location  = new Point(10, y),
-                Size      = new Size(760, 22),
-                Font      = new Font("Consolas", 8.5f),
-                ForeColor = Color.FromArgb(80, 200, 80),
-                BackColor = Color.FromArgb(14, 18, 28),
-                AutoSize  = false,
-                Text      = "→  (default)"
-            };
-            tab.Controls.Add(lblTrackSpec);
+            foreach (var d in _devices) cmbGroupDevice.Items.Add(d);
+            if (cmbGroupDevice.Items.Count > 0) cmbGroupDevice.SelectedIndex = 0;
         }
 
-        /// <summary>Populates the Advanced tab with drive selection, extra CLI arguments, and token reference notes.</summary>
-        private void BuildAdvancedTab(TabPage tab)
+        /// <summary>Shared handler for controls whose only effect is refreshing the command-line preview.</summary>
+        private void OnParamChanged(object? sender, EventArgs e) => SafeUpdatePreviews();
+
+        /// <summary>Shared handler for controls whose only effect is refreshing the file-pattern preview.</summary>
+        private void OnPatternChanged(object? sender, EventArgs e) => UpdatePatternPreview();
+
+        /// <summary>Sets the disk format text box from the quick-select combo.</summary>
+        private void CmbFmtQuick_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            int y = 14;
-            AddSectionHeader(tab, L10n.T("job_dlg.adv_head"), 10, y, Color.FromArgb(160, 200, 255));
-            y += 28;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.drive"), 10, y + 3));
-            cmbDrive = MkCombo(120, y, 120);
-            cmbDrive.Items.AddRange(new object[] { "(auto)", "a", "b", "0", "1", "2", "3" });
-            cmbDrive.SelectedIndex = 0;
-            cmbDrive.SelectedIndexChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.drive_hint"), 255, y + 3));
-            tab.Controls.Add(cmbDrive);
-
-            y += 34;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.extra_args"), 10, y + 3));
-            txtExtraArgs = MkTxt(120, y, 620);
-            txtExtraArgs.TextChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(txtExtraArgs);
-
-            y += 50;
-            tab.Controls.Add(new Label
-            {
-                Text      = L10n.T("job_dlg.token_note"),
-                Location  = new Point(10, y),
-                Size      = new Size(750, 80),
-                Font      = new Font("Consolas", 8f),
-                ForeColor = Color.FromArgb(90, 130, 170),
-                BackColor = Color.FromArgb(16, 20, 30)
-            });
+            if (cmbFmtQuick.SelectedItem != null) txtFormat.Text = cmbFmtQuick.SelectedItem.ToString();
         }
 
-        /// <summary>Populates the Post-Actions tab with a list view and Add/Edit/Remove/Move buttons.</summary>
-        private void BuildPostActionsTab(TabPage tab)
+        /// <summary>Enables/disables the retry-count spinner alongside the retries checkbox.</summary>
+        private void ChkRetries_CheckedChanged(object? sender, EventArgs e)
         {
-            tab.Controls.Add(new Label
-            {
-                Text      = L10n.T("job_dlg.pa_hint"),
-                Location  = new Point(10, 10),
-                Size      = new Size(760, 18),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(90, 130, 170),
-                BackColor = Color.Transparent
-            });
+            nudRetries.Enabled = chkRetries.Checked;
+            SafeUpdatePreviews();
+        }
 
-            lvPostActions = new ListView
-            {
-                Location      = new Point(10, 34),
-                Size          = new Size(760, 380),
-                View          = View.Details,
-                FullRowSelect = true,
-                BackColor     = Color.FromArgb(18, 22, 32),
-                ForeColor     = Color.FromArgb(180, 210, 255),
-                Font          = new Font("Consolas", 8f),
-                BorderStyle   = BorderStyle.FixedSingle
-            };
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_ord"),   30);
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_name"), 150);
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_type"),  90);
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_exe"),  280);
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_args"), 170);
-            lvPostActions.Columns.Add(L10n.T("job_dlg.pa_col_en"),    30);
-            tab.Controls.Add(lvPostActions);
+        /// <summary>Enables/disables the head-0 offset spinner alongside its checkbox.</summary>
+        private void ChkHead0Off_CheckedChanged(object? sender, EventArgs e)
+        {
+            nudHead0Off.Enabled = chkHead0Off.Checked;
+            SafeUpdatePreviews();
+        }
 
-            int y = 422;
-            var btnAdd  = MakeBtn(L10n.T("job_dlg.pa_add"),    10, y,  90, 26, Color.FromArgb(20, 55, 30), Color.FromArgb(100, 220, 130), Color.FromArgb(50, 120, 70));
-            var btnEdit = MakeBtn(L10n.T("job_dlg.pa_edit"),  110, y,  80, 26, Color.FromArgb(20, 35, 65), Color.FromArgb(100, 160, 240), Color.FromArgb(50, 80, 140));
-            var btnRem  = MakeBtn(L10n.T("job_dlg.pa_remove"),200, y,  90, 26, Color.FromArgb(55, 20, 20), Color.FromArgb(220, 80, 80),   Color.FromArgb(100, 40, 40));
-            var btnUp   = MakeBtn("▲",                         300, y,  40, 26, Color.FromArgb(20, 35, 55), Color.White,                   Color.FromArgb(50, 80, 120));
-            var btnDown = MakeBtn("▼",                         348, y,  40, 26, Color.FromArgb(20, 35, 55), Color.White,                   Color.FromArgb(50, 80, 120));
-
-            btnAdd.Click  += BtnAddAction_Click;
-            btnEdit.Click += BtnEditAction_Click;
-            btnRem.Click  += (s, e) => { if (lvPostActions.SelectedItems.Count > 0) lvPostActions.Items.Remove(lvPostActions.SelectedItems[0]); ReorderActions(); };
-            btnUp.Click   += (s, e) => MoveAction(-1);
-            btnDown.Click += (s, e) => MoveAction(1);
-
-            tab.Controls.AddRange(new Control[] { btnAdd, btnEdit, btnRem, btnUp, btnDown });
+        /// <summary>Enables/disables the head-1 offset spinner alongside its checkbox.</summary>
+        private void ChkHead1Off_CheckedChanged(object? sender, EventArgs e)
+        {
+            nudHead1Off.Enabled = chkHead1Off.Checked;
+            SafeUpdatePreviews();
         }
 
         /// <summary>
@@ -581,68 +314,81 @@ namespace GwCopyPro.Forms
         }
 
         /// <summary>
-        /// Validates inputs, builds the <see cref="GwJob"/>, and assigns it to <see cref="Result"/>.
-        /// Shows a warning and cancels the dialog result if the image file is missing (non-repetitive mode).
+        /// Validates inputs and builds either the group result or the single-job result,
+        /// cancelling the dialog result (without closing) if validation fails.
         /// </summary>
         private void BtnOk_Click(object? sender, EventArgs e)
         {
-            if (chkUseGroup?.Checked ?? false)
+            bool ok = (chkUseGroup?.Checked ?? false)
+                ? TryBuildGroupResult()
+                : TryBuildSingleJobResult();
+            if (!ok) DialogResult = DialogResult.None;
+        }
+
+        /// <summary>
+        /// Validates the device-group inputs and, on success, assigns <see cref="GroupResult"/>.
+        /// Shows a warning message box and returns <see langword="false"/> on any validation failure.
+        /// </summary>
+        private bool TryBuildGroupResult()
+        {
+            if (!(chkRepetitive?.Checked ?? false) ||
+                !Models.FilePattern.HasTokens(txtFilePattern?.Text ?? ""))
             {
-                if (!(chkRepetitive?.Checked ?? false) ||
-                    !Models.FilePattern.HasTokens(txtFilePattern?.Text ?? ""))
-                {
-                    MessageBox.Show(L10n.T("job_dlg.group_needs_repeat"),
-                        L10n.T("job_dlg.group_cap"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    DialogResult = DialogResult.None;
-                    return;
-                }
-
-                var members = ReadGroupMembers();
-                string? err = GroupRepetitiveJob.Validate(members);
-                if (err != null)
-                {
-                    MessageBox.Show(L10n.T(err), L10n.T("job_dlg.group_cap"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    DialogResult = DialogResult.None;
-                    return;
-                }
-
-                var missing = members.Find(m => !m.Device.IsConnected);
-                if (missing != null)
-                {
-                    MessageBox.Show(
-                        string.Format(L10n.T("job_dlg.group_missing"),
-                            missing.Device.ToString()),
-                        L10n.T("job_dlg.group_cap"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    DialogResult = DialogResult.None;
-                    return;
-                }
-
-                var template = BuildParameters();
-                template.Device    = null;
-                template.Drive     = null;
-                template.ImageFile = null;
-
-                var groupActions = new List<PostAction>();
-                foreach (ListViewItem item in lvPostActions.Items)
-                    groupActions.Add((PostAction)item.Tag!);
-
-                GroupResult = new GroupRepetitiveJob
-                {
-                    JobType           = cmbJobType.SelectedIndex == 0 ? JobType.Read : JobType.Write,
-                    ParameterTemplate = template,
-                    PostActions       = groupActions,
-                    FilePattern       = txtFilePattern!.Text,
-                    OutputFolder      = txtOutputFolder?.Text ?? "",
-                    DateTimeFormat    = txtDtFormat?.Text ?? "yyyyMMdd_HHmmss",
-                    NextDiskNumber    = (int)(nudStartIndex?.Value ?? 1),
-                    Members           = members
-                };
-                return;   // DialogResult stays OK; Result stays null
+                MessageBox.Show(L10n.T("job_dlg.group_needs_repeat"),
+                    L10n.T("job_dlg.group_cap"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
             }
 
+            var members = ReadGroupMembers();
+            string? err = GroupRepetitiveJob.Validate(members);
+            if (err != null)
+            {
+                MessageBox.Show(L10n.T(err), L10n.T("job_dlg.group_cap"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            var missing = members.Find(m => !m.Device.IsConnected);
+            if (missing != null)
+            {
+                MessageBox.Show(
+                    string.Format(L10n.T("job_dlg.group_missing"),
+                        missing.Device.ToString()),
+                    L10n.T("job_dlg.group_cap"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            var template = BuildParameters();
+            template.Device    = null;
+            template.Drive     = null;
+            template.ImageFile = null;
+
+            var groupActions = new List<PostAction>();
+            foreach (ListViewItem item in lvPostActions.Items)
+                groupActions.Add((PostAction)item.Tag!);
+
+            GroupResult = new GroupRepetitiveJob
+            {
+                JobType           = cmbJobType.SelectedIndex == 0 ? JobType.Read : JobType.Write,
+                ParameterTemplate = template,
+                PostActions       = groupActions,
+                FilePattern       = txtFilePattern!.Text,
+                OutputFolder      = txtOutputFolder?.Text ?? "",
+                DateTimeFormat    = txtDtFormat?.Text ?? "yyyyMMdd_HHmmss",
+                NextDiskNumber    = (int)(nudStartIndex?.Value ?? 1),
+                Members           = members
+            };
+            return true;   // DialogResult stays OK; Result stays null
+        }
+
+        /// <summary>
+        /// Validates the single-job inputs and, on success, builds the <see cref="GwJob"/> and assigns <see cref="Result"/>.
+        /// Shows a warning message box and returns <see langword="false"/> if the image file is missing (non-repetitive mode).
+        /// </summary>
+        private bool TryBuildSingleJobResult()
+        {
             if (string.IsNullOrWhiteSpace(txtImageFile.Text) &&
                 !(chkRepetitive?.Checked ?? false))
             {
@@ -650,8 +396,7 @@ namespace GwCopyPro.Forms
                     L10n.T("job_dlg.missing_image"),
                     L10n.T("job_dlg.missing_image_cap"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                DialogResult = DialogResult.None;
-                return;
+                return false;
             }
 
             var jt  = cmbJobType.SelectedIndex == 0 ? JobType.Read : JobType.Write;
@@ -672,6 +417,7 @@ namespace GwCopyPro.Forms
             job.SourcePreset = BuildPreset();
 
             Result = job;
+            return true;
         }
 
         /// <summary>Populates the device combo box and selects the pre-selected device if provided.</summary>
@@ -716,6 +462,17 @@ namespace GwCopyPro.Forms
                 item.SubItems[5].Text = action.IsEnabled ? "✓" : "—";
             }
         }
+
+        /// <summary>Removes the selected post-action row and re-numbers the remaining rows.</summary>
+        private void BtnRemoveAction_Click(object? sender, EventArgs e)
+        {
+            if (lvPostActions.SelectedItems.Count > 0) lvPostActions.Items.Remove(lvPostActions.SelectedItems[0]);
+            ReorderActions();
+        }
+
+        private void BtnMoveActionUp_Click(object? sender, EventArgs e) => MoveAction(-1);
+
+        private void BtnMoveActionDown_Click(object? sender, EventArgs e) => MoveAction(1);
 
         /// <summary>Creates a <see cref="ListViewItem"/> representing the given <see cref="PostAction"/>.</summary>
         /// <param name="a">The post-action to represent.</param>
@@ -785,173 +542,54 @@ namespace GwCopyPro.Forms
             e.Graphics.DrawString(tab.TabPages[e.Index].Text, font, fg, bounds, sf);
         }
 
-        /// <summary>Populates the Repeat tab with output folder, file pattern, start index, date-time format, and live preview controls.</summary>
-        private void BuildRepeatTab(TabPage tab)
+        /// <summary>Opens a folder picker for the repetitive-mode output folder.</summary>
+        private void BtnBrowseFolder_Click(object? sender, EventArgs e)
         {
-            int y = 14;
-
-            chkRepetitive = MkChk(L10n.T("job_dlg.repeat_enabled"), 10, y);
-            chkRepetitive.Font = new Font("Consolas", 9f, FontStyle.Bold);
-            chkRepetitive.ForeColor = Color.FromArgb(100, 220, 160);
-            chkRepetitive.CheckedChanged += (s, e) => SafeUpdatePreviews();
-            tab.Controls.Add(chkRepetitive);
-
-            y += 34;
-            tab.Controls.Add(Sep(10, y, 760)); y += 12;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.output_folder"), 10, y + 3));
-            txtOutputFolder = MkTxt(175, y, 500);
-            txtOutputFolder.PlaceholderText = L10n.T("job_dlg.output_folder_hint");
-            txtOutputFolder.TextChanged += (s, e) => UpdatePatternPreview();
-            var btnBrowseFolder = MakeBtn("…", 683, y, 30, 22,
-                Color.FromArgb(30, 50, 80), Color.White, Color.FromArgb(60, 100, 160));
-            btnBrowseFolder.Click += (s, e) =>
+            using var fbd = new FolderBrowserDialog
             {
-                using var fbd = new FolderBrowserDialog
-                {
-                    Description            = L10n.T("job_dlg.output_folder"),
-                    UseDescriptionForTitle = true,
-                    ShowNewFolderButton    = true
-                };
-                if (!string.IsNullOrWhiteSpace(txtOutputFolder.Text) &&
-                    Directory.Exists(txtOutputFolder.Text))
-                    fbd.InitialDirectory = txtOutputFolder.Text;
-                if (fbd.ShowDialog(this) == DialogResult.OK)
-                    txtOutputFolder.Text = fbd.SelectedPath;
+                Description            = L10n.T("job_dlg.output_folder"),
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton    = true
             };
-            tab.Controls.AddRange(new Control[] { txtOutputFolder, btnBrowseFolder });
+            if (!string.IsNullOrWhiteSpace(txtOutputFolder.Text) &&
+                Directory.Exists(txtOutputFolder.Text))
+                fbd.InitialDirectory = txtOutputFolder.Text;
+            if (fbd.ShowDialog(this) == DialogResult.OK)
+                txtOutputFolder.Text = fbd.SelectedPath;
+        }
 
-            y += 32;
-            txtFilePattern = MkTxt(175, y, 570);
-            txtFilePattern.TextChanged += (s, e) => UpdatePatternPreview();
-            tab.Controls.Add(txtFilePattern);
+        /// <summary>
+        /// Toggles the group-member controls and force-enables repetitive mode when a group is
+        /// turned on. Device groups are read-only (imaging several source disks in parallel), so
+        /// Job Type is locked to Read for as long as a group is in use.
+        /// </summary>
+        private void ChkUseGroup_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool on = chkUseGroup.Checked;
+            cmbGroupDevice.Enabled = on;
+            cmbGroupDrive.Enabled  = on;
+            lvGroupMembers.Enabled = on;
+            if (on && !chkRepetitive.Checked) chkRepetitive.Checked = true;
 
-            y += 28;
-            tab.Controls.Add(new Label
-            {
-                Text      = L10n.T("job_dlg.pattern_hint"),
-                Location  = new Point(175, y),
-                Size      = new Size(570, 16),
-                Font      = new Font("Consolas", 7.5f),
-                ForeColor = Color.FromArgb(90, 130, 170),
-                BackColor = Color.Transparent
-            });
+            if (on) cmbJobType.SelectedIndex = 0;
+            cmbJobType.Enabled = !on;
+        }
 
-            y += 28;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.start_index"), 10, y + 3));
-            nudStartIndex = MkNum(175, y, 100, 1, 9999, 1);
-            nudStartIndex.ValueChanged += (s, e) => UpdatePatternPreview();
-            tab.Controls.Add(nudStartIndex);
+        /// <summary>Adds the selected device/drive pair as a new group-member row.</summary>
+        private void BtnGroupAdd_Click(object? sender, EventArgs e)
+        {
+            if (cmbGroupDevice.SelectedItem is not GreaseWeazleDevice dev) return;
+            var item = new ListViewItem(dev.ToString());
+            item.SubItems.Add(cmbGroupDrive.SelectedItem?.ToString() ?? "0");
+            item.Tag = dev;
+            lvGroupMembers.Items.Add(item);
+        }
 
-            y += 32;
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.dt_format"), 10, y + 3));
-            txtDtFormat = MkTxt(175, y, 260);
-            txtDtFormat.Text = "yyyyMMdd_HHmmss";
-            txtDtFormat.TextChanged += (s, e) => UpdatePatternPreview();
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.dt_format_hint"), 444, y + 3));
-            tab.Controls.Add(txtDtFormat);
-
-            y += 36;
-            tab.Controls.Add(Sep(10, y, 760)); y += 12;
-
-            tab.Controls.Add(MkLbl(L10n.T("job_dlg.pattern_preview"), 10, y + 3));
-            lblPatternPreview = new Label
-            {
-                Location  = new Point(175, y),
-                Size      = new Size(570, 22),
-                Font      = new Font("Consolas", 9f),
-                ForeColor = Color.FromArgb(220, 200, 80),
-                BackColor = Color.FromArgb(14, 18, 28),
-                AutoSize  = false,
-                Padding   = new Padding(4, 2, 0, 0)
-            };
-            tab.Controls.Add(lblPatternPreview);
-
-            y += 40;
-            tab.Controls.Add(new Label
-            {
-                Text      = L10n.T("job_dlg.repeat_note"),
-                Location  = new Point(10, y),
-                Size      = new Size(760, 42),
-                Font      = new Font("Consolas", 8f),
-                ForeColor = Color.FromArgb(90, 130, 160),
-                BackColor = Color.FromArgb(16, 20, 30)
-            });
-
-            y += 64;
-            tab.Controls.Add(Sep(10, y, 760)); y += 12;
-
-            tab.Controls.Add(MkLbl("Preset Name:", 10, y + 3));
-            txtPresetName = MkTxt(175, y, 400);
-            txtPresetName.Text = "My Preset";
-            tab.Controls.Add(txtPresetName);
-
-            y += 32;
-            tab.Controls.Add(Sep(10, y, 760)); y += 10;
-
-            chkUseGroup = MkChk(L10n.T("job_dlg.use_group"), 10, y);
-            chkUseGroup.Font = new Font("Consolas", 9f, FontStyle.Bold);
-            chkUseGroup.ForeColor = Color.FromArgb(120, 190, 255);
-            chkUseGroup.CheckedChanged += (s, e) =>
-            {
-                bool on = chkUseGroup.Checked;
-                cmbGroupDevice.Enabled = on;
-                cmbGroupDrive.Enabled  = on;
-                lvGroupMembers.Enabled = on;
-                if (on && !chkRepetitive.Checked) chkRepetitive.Checked = true;
-            };
-            tab.Controls.Add(chkUseGroup);
-
-            y += 26;
-            cmbGroupDevice = MkCombo(10, y, 320);
-            foreach (var d in _devices) cmbGroupDevice.Items.Add(d);
-            if (cmbGroupDevice.Items.Count > 0) cmbGroupDevice.SelectedIndex = 0;
-
-            cmbGroupDrive = MkCombo(338, y, 70);
-            cmbGroupDrive.Items.AddRange(new object[] { "0", "1", "a", "b" });
-            cmbGroupDrive.SelectedIndex = 0;
-
-            var btnGroupAdd = MakeBtn(L10n.T("job_dlg.group_add"), 416, y, 110, 22,
-                Color.FromArgb(18, 60, 32), Color.FromArgb(90, 220, 120), Color.FromArgb(40, 120, 65));
-            btnGroupAdd.Click += (s, e) =>
-            {
-                if (cmbGroupDevice.SelectedItem is not GreaseWeazleDevice dev) return;
-                var item = new ListViewItem(dev.ToString());
-                item.SubItems.Add(cmbGroupDrive.SelectedItem?.ToString() ?? "0");
-                item.Tag = dev;
-                lvGroupMembers.Items.Add(item);
-            };
-
-            var btnGroupRemove = MakeBtn(L10n.T("job_dlg.group_remove"), 534, y, 110, 22,
-                Color.FromArgb(60, 20, 20), Color.FromArgb(200, 80, 80), Color.FromArgb(100, 40, 40));
-            btnGroupRemove.Click += (s, e) =>
-            {
-                foreach (ListViewItem it in lvGroupMembers.SelectedItems)
-                    lvGroupMembers.Items.Remove(it);
-            };
-
-            tab.Controls.AddRange(new Control[]
-                { cmbGroupDevice, cmbGroupDrive, btnGroupAdd, btnGroupRemove });
-
-            y += 28;
-            lvGroupMembers = new ListView
-            {
-                Location      = new Point(10, y),
-                Size          = new Size(760, 86),
-                View          = View.Details,
-                FullRowSelect = true,
-                BackColor     = Color.FromArgb(28, 34, 48),
-                ForeColor     = Color.FromArgb(200, 230, 255),
-                Font          = new Font("Consolas", 8.5f),
-                HeaderStyle   = ColumnHeaderStyle.Nonclickable
-            };
-            lvGroupMembers.Columns.Add(L10n.T("job_dlg.group_col_device"), 480);
-            lvGroupMembers.Columns.Add(L10n.T("job_dlg.group_col_drive"), 120);
-            tab.Controls.Add(lvGroupMembers);
-
-            cmbGroupDevice.Enabled = false;
-            cmbGroupDrive.Enabled  = false;
-            lvGroupMembers.Enabled = false;
+        /// <summary>Removes all selected group-member rows.</summary>
+        private void BtnGroupRemove_Click(object? sender, EventArgs e)
+        {
+            foreach (ListViewItem it in lvGroupMembers.SelectedItems)
+                lvGroupMembers.Items.Remove(it);
         }
 
         /// <summary>Refreshes the file-pattern live preview label from the current pattern, index, date-time format, and output folder.</summary>
@@ -1101,16 +739,40 @@ namespace GwCopyPro.Forms
         {
             _initialized = false;
 
-            cmbJobType.SelectedIndex = preset.JobType == JobType.Read ? 0 : 1;
+            ApplyPresetMainFields(preset);
+            ApplyPresetTrackFields(preset);
+            ApplyPresetAdvancedFields(preset);
+            ApplyPresetRepeatFields(preset);
+            ApplyPresetGroupFields(preset);
+            ApplyPresetPostActions(preset);
 
-            txtFormat.Text = preset.DiskFormat ?? "";
+            _initialized = true;
+            SafeUpdatePreviews();
+            UpdatePatternPreview();
+        }
+
+        /// <summary>
+        /// Applies device and job type fields from a loaded preset. Disk format is saved in the
+        /// preset file but deliberately not restored here — the physical disk in the drive at
+        /// load time may not match what was saved, so the user must re-pick a format from the
+        /// quick-select combo (or type one) each time a preset is loaded.
+        /// </summary>
+        private void ApplyPresetMainFields(Models.JobPreset preset)
+        {
+            cmbJobType.SelectedIndex = preset.JobType == JobType.Read ? 0 : 1;
+            txtFormat.Text = "";
+            cmbFmtQuick.SelectedIndex = -1;
 
             if (!string.IsNullOrWhiteSpace(preset.Device))
                 for (int i = 0; i < cmbDevice.Items.Count; i++)
                     if (cmbDevice.Items[i] is GreaseWeazleDevice d &&
                         d.SerialPort == preset.Device)
                     { cmbDevice.SelectedIndex = i; break; }
+        }
 
+        /// <summary>Applies cylinder range, head, step, hswap, and flippy head-offset fields from a loaded preset.</summary>
+        private void ApplyPresetTrackFields(Models.JobPreset preset)
+        {
             nudStartCyl.Value     = preset.StartCylinder ?? 0;
             nudEndCyl.Value       = preset.EndCylinder   ?? 79;
             cmbHead.SelectedIndex = preset.Head switch { 0 => 1, 1 => 2, _ => 0 };
@@ -1120,7 +782,11 @@ namespace GwCopyPro.Forms
             nudHead0Off.Value     = preset.Head0Offset   ?? 0;
             chkHead1Off.Checked   = preset.Head1Offset.HasValue;
             nudHead1Off.Value     = preset.Head1Offset   ?? 0;
+        }
 
+        /// <summary>Applies revolutions, density, bitrate, retries, drive, and other read/write/advanced fields from a loaded preset.</summary>
+        private void ApplyPresetAdvancedFields(Models.JobPreset preset)
+        {
             nudRevs.Value = preset.Revolutions ?? 1;
             if (!string.IsNullOrWhiteSpace(preset.Densel))
                 for (int i = 0; i < cmbDensel.Items.Count; i++)
@@ -1147,14 +813,22 @@ namespace GwCopyPro.Forms
                 for (int i = 0; i < cmbDrive.Items.Count; i++)
                     if (cmbDrive.Items[i]?.ToString() == preset.Drive)
                     { cmbDrive.SelectedIndex = i; break; }
+        }
 
+        /// <summary>Applies repetitive-mode, file pattern, output folder, start index, date-time format, and preset name fields from a loaded preset.</summary>
+        private void ApplyPresetRepeatFields(Models.JobPreset preset)
+        {
             chkRepetitive.Checked = preset.RepetitiveMode;
             txtFilePattern.Text   = preset.FilePattern    ?? "";
             txtOutputFolder.Text  = preset.OutputFolder   ?? "";
             nudStartIndex.Value   = Math.Max(1, preset.StartIndex);
             txtDtFormat.Text      = preset.DateTimeFormat ?? "yyyyMMdd_HHmmss";
             if (txtPresetName != null) txtPresetName.Text = preset.PresetName;
+        }
 
+        /// <summary>Applies device-group member rows and the group-enabled flag from a loaded preset.</summary>
+        private void ApplyPresetGroupFields(Models.JobPreset preset)
+        {
             lvGroupMembers.Items.Clear();
             foreach (var gm in preset.GroupMembers)
             {
@@ -1167,223 +841,15 @@ namespace GwCopyPro.Forms
                 lvGroupMembers.Items.Add(item);
             }
             chkUseGroup.Checked = preset.UseDeviceGroup;
-
-            if (lvPostActions != null)
-            {
-                lvPostActions.Items.Clear();
-                foreach (var ap in preset.PostActions)
-                    lvPostActions.Items.Add(ActionToItem(ap.ToPostAction()));
-            }
-
-            _initialized = true;
-            SafeUpdatePreviews();
-            UpdatePatternPreview();
         }
 
-        /// <summary>Creates a styled field-caption label.</summary>
-        private static Label MkLbl(string text, int x, int y) => new()
+        /// <summary>Applies the post-action list from a loaded preset.</summary>
+        private void ApplyPresetPostActions(Models.JobPreset preset)
         {
-            Text = text, Location = new Point(x, y), AutoSize = true,
-            Font = new Font("Consolas", 8f), ForeColor = Color.FromArgb(130, 160, 200),
-            BackColor = Color.Transparent
-        };
-
-        /// <summary>Creates a styled single-line text box.</summary>
-        private static TextBox MkTxt(int x, int y, int w) => new()
-        {
-            Location = new Point(x, y), Size = new Size(w, 22),
-            BackColor = Color.FromArgb(28, 34, 48), ForeColor = Color.FromArgb(200, 230, 255),
-            BorderStyle = BorderStyle.FixedSingle, Font = new Font("Consolas", 8.5f)
-        };
-
-        /// <summary>Creates a styled drop-down combo box.</summary>
-        private static ComboBox MkCombo(int x, int y, int w) => new()
-        {
-            Location = new Point(x, y), Size = new Size(w, 22),
-            BackColor = Color.FromArgb(28, 34, 48), ForeColor = Color.FromArgb(200, 230, 255),
-            FlatStyle = FlatStyle.Flat, Font = new Font("Consolas", 8.5f),
-            DropDownStyle = ComboBoxStyle.DropDownList
-        };
-
-        /// <summary>Creates a styled numeric spinner with the given bounds and value range.</summary>
-        private static NumericUpDown MkNum(int x, int y, int w, int min, int max, int val) => new()
-        {
-            Location = new Point(x, y), Size = new Size(w, 22),
-            Minimum = min, Maximum = max, Value = val,
-            BackColor = Color.FromArgb(28, 34, 48), ForeColor = Color.FromArgb(200, 230, 255),
-            Font = new Font("Consolas", 8.5f), BorderStyle = BorderStyle.FixedSingle
-        };
-
-        /// <summary>Creates a styled check box.</summary>
-        private static CheckBox MkChk(string text, int x, int y) => new()
-        {
-            Text = text, Location = new Point(x, y), AutoSize = true,
-            ForeColor = Color.FromArgb(160, 200, 255), BackColor = Color.Transparent,
-            Font = new Font("Consolas", 8.5f)
-        };
-
-        /// <summary>Creates a flat-styled button with the given position, size, and colours.</summary>
-        private static Button MakeBtn(string text, int x, int y, int w, int h,
-            Color bg, Color fg, Color border)
-        {
-            var b = new Button
-            {
-                Text = text, Location = new Point(x, y), Size = new Size(w, h),
-                FlatStyle = FlatStyle.Flat, BackColor = bg, ForeColor = fg,
-                Font = new Font("Consolas", 8f)
-            };
-            b.FlatAppearance.BorderColor = border;
-            return b;
-        }
-
-        /// <summary>Creates a 1-pixel horizontal rule for use as a visual section separator.</summary>
-        private static Label Sep(int x, int y, int w) => new()
-        {
-            Location = new Point(x, y), Size = new Size(w, 1),
-            BackColor = Color.FromArgb(40, 60, 90)
-        };
-
-        /// <summary>Adds a bold, coloured section heading label to a tab page.</summary>
-        private static void AddSectionHeader(TabPage tab, string text, int x, int y, Color color) =>
-            tab.Controls.Add(new Label
-            {
-                Text = text, Location = new Point(x, y), AutoSize = true,
-                Font = new Font("Consolas", 8.5f, FontStyle.Bold),
-                ForeColor = color, BackColor = Color.Transparent
-            });
-    }
-
-    /// <summary>
-    /// Compact modal dialog for creating or editing a single <see cref="PostAction"/>.
-    /// Presents fields for name, action type, executable path, arguments, and enabled state.
-    /// Changes are written back to the supplied <see cref="PostAction"/> on OK.
-    /// </summary>
-    public class PostActionDialog : Form
-    {
-        private readonly PostAction _action;
-        private TextBox  txtName    = null!;
-        private ComboBox cmbType    = null!;
-        private TextBox  txtExe     = null!;
-        private TextBox  txtArgs    = null!;
-        private CheckBox chkEnabled = null!;
-
-        /// <summary>
-        /// Initialises the dialog, pre-populating all fields from <paramref name="action"/>.
-        /// </summary>
-        /// <param name="action">The post-action to edit; modified in-place on OK.</param>
-        public PostActionDialog(PostAction action)
-        {
-            _action = action;
-            InitializeComponent();
-        }
-
-        /// <summary>Builds and lays out all child controls.</summary>
-        private void InitializeComponent()
-        {
-            Text            = L10n.T("pa_dlg.title");
-            Size            = new Size(560, 270);
-            BackColor       = Color.FromArgb(18, 22, 32);
-            ForeColor       = Color.FromArgb(180, 210, 255);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition   = FormStartPosition.CenterParent;
-            MaximizeBox     = false;
-
-            Label L(string key, int x, int y) => new()
-            {
-                Text = L10n.T(key), Location = new Point(x, y), AutoSize = true,
-                Font = new Font("Consolas", 8f), ForeColor = Color.FromArgb(130, 160, 200)
-            };
-            TextBox T(int x, int y, int w, string val) => new()
-            {
-                Location = new Point(x, y), Size = new Size(w, 22), Text = val,
-                BackColor = Color.FromArgb(28, 34, 48), ForeColor = Color.FromArgb(200, 230, 255),
-                BorderStyle = BorderStyle.FixedSingle, Font = new Font("Consolas", 8.5f)
-            };
-
-            int y = 16;
-            Controls.Add(L("pa_dlg.name", 10, y + 3));
-            txtName = T(130, y, 400, _action.Name);
-            Controls.Add(txtName);
-
-            y += 34;
-            Controls.Add(L("pa_dlg.type", 10, y + 3));
-            cmbType = new ComboBox
-            {
-                Location = new Point(130, y), Size = new Size(200, 22),
-                BackColor = Color.FromArgb(28, 34, 48), ForeColor = Color.FromArgb(200, 230, 255),
-                FlatStyle = FlatStyle.Flat, Font = new Font("Consolas", 8.5f),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbType.Items.AddRange(new object[]
-            {
-                L10n.T("pa_dlg.type_exe"),
-                L10n.T("pa_dlg.type_bat"),
-                L10n.T("pa_dlg.type_ps1")
-            });
-            cmbType.SelectedIndex = (int)_action.ActionType;
-            Controls.Add(cmbType);
-
-            y += 34;
-            Controls.Add(L("pa_dlg.file", 10, y + 3));
-            txtExe = T(130, y, 358, _action.ExecutablePath);
-            var btnBrowse = new Button
-            {
-                Text = "...", Location = new Point(496, y), Size = new Size(32, 22),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(30, 50, 80), ForeColor = Color.White
-            };
-            btnBrowse.FlatAppearance.BorderColor = Color.FromArgb(60, 100, 160);
-            btnBrowse.Click += (s, e) =>
-            {
-                using var ofd = new OpenFileDialog
-                    { Filter = "Executables (*.exe;*.bat;*.ps1)|*.exe;*.bat;*.ps1|All (*.*)|*.*" };
-                if (ofd.ShowDialog(this) == DialogResult.OK) txtExe.Text = ofd.FileName;
-            };
-            Controls.AddRange(new Control[] { txtExe, btnBrowse });
-
-            y += 34;
-            Controls.Add(L("pa_dlg.args", 10, y + 3));
-            txtArgs = T(130, y, 400, _action.Arguments);
-            Controls.Add(txtArgs);
-
-            y += 34;
-            chkEnabled = new CheckBox
-            {
-                Text = L10n.T("pa_dlg.enabled"), Location = new Point(130, y),
-                Checked = _action.IsEnabled, Font = new Font("Consolas", 8.5f),
-                ForeColor = Color.FromArgb(160, 200, 255), AutoSize = true
-            };
-            Controls.Add(chkEnabled);
-
-            y += 40;
-            var btnOk = new Button
-            {
-                Text = L10n.T("pa_dlg.ok"), Location = new Point(360, y), Size = new Size(80, 28),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(20, 60, 30),
-                ForeColor = Color.FromArgb(100, 220, 130), Font = new Font("Consolas", 8.5f),
-                DialogResult = DialogResult.OK
-            };
-            btnOk.FlatAppearance.BorderColor = Color.FromArgb(50, 120, 70);
-            btnOk.Click += (s, e) =>
-            {
-                _action.Name           = txtName.Text;
-                _action.ActionType     = (PostActionType)cmbType.SelectedIndex;
-                _action.ExecutablePath = txtExe.Text;
-                _action.Arguments      = txtArgs.Text;
-                _action.IsEnabled      = chkEnabled.Checked;
-            };
-
-            var btnCancel = new Button
-            {
-                Text = L10n.T("pa_dlg.cancel"), Location = new Point(450, y), Size = new Size(80, 28),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(50, 25, 25),
-                ForeColor = Color.FromArgb(200, 100, 100), Font = new Font("Consolas", 8.5f),
-                DialogResult = DialogResult.Cancel
-            };
-            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(100, 50, 50);
-
-            Controls.AddRange(new Control[] { btnOk, btnCancel });
-            AcceptButton = btnOk;
-            CancelButton = btnCancel;
+            if (lvPostActions == null) return;
+            lvPostActions.Items.Clear();
+            foreach (var ap in preset.PostActions)
+                lvPostActions.Items.Add(ActionToItem(ap.ToPostAction()));
         }
     }
 }

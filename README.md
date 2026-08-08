@@ -21,6 +21,7 @@ Or Handbook as PDF File: [English](docs/HANDBOOK.en.pdf) | [German](docs/HANDBOO
 - Manage **multiple GreaseWeazle devices** connected simultaneously via separate COM ports
 - Create, queue, and monitor **read and write jobs** with a live track-by-track visualiser
 - Run **repetitive imaging sessions** — insert a disk, image it, swap, repeat — with automatic file naming
+- Run **group repetitive jobs** across several devices in parallel, guided by an LED blink-and-verify disk-insertion workflow
 - Attach **post-processing actions** (executables, batch scripts, PowerShell scripts) that run automatically after each successful job
 - Save and reload **job presets** so common configurations (formats, track ranges, flags) are a single click away
 
@@ -59,6 +60,7 @@ Or open `GreaseWeazleManager.sln` in Visual Studio 2022+ and press **F5**.
 
 - Add unlimited GreaseWeazle devices, each with its own COM port and display name.
 - Pulsing LED indicator per device reflects live connection state (green = connected, red = disconnected).
+- **⚡ Blink** button on each device card pulses the attached drive's LED (alternating drive 0/1) so you can tell which physical drive is on which COM port — handy with several GreaseWeazles connected.
 - **Device Manager** dialog lets you add, remove, and refresh COM-port assignments at runtime without restarting the application.
 
 ### Multi-Threaded Job Execution
@@ -127,8 +129,21 @@ Designed for bulk-imaging runs (e.g. digitising a box of floppies):
 - Enable **Repetitive Mode** in the New Job dialog.
 - Set a **file pattern** with optional tokens: `{n}`, `{n:D3}` (zero-padded counter), `{dt}` (date/time stamp).
 - Choose an **output folder** and a **start index**.
-- After each disk completes, the app prompts you to insert the next disk and continues automatically, incrementing the counter.
+- After each disk completes, the app prompts you to insert the next disk (showing the device and drive that produced it) and continues automatically, incrementing the counter.
 - A pattern preview in the dialog shows how the file names will look (e.g. `Disk_001_20260101_120000.scp`).
+
+### Group Repetitive Jobs (Parallel Batch Imaging)
+
+For digitising large collections faster, repetitive mode can target a **device group** —
+several GreaseWeazle devices imaging one batch of disks at the same time:
+
+- Configure the group on the Repetitive tab of the New Job dialog: add each device/drive pair (at least 2 members, no device used twice).
+- A **Batch Insert dialog** guides disk insertion: drives blink their LED one at a time; confirm each with **✔ Disk inserted** once the app verifies a disk is present (`gw rpm`).
+- Exclude a drive for the current batch and re-include it later — exclusion is per batch and fully reversible.
+- Press **▶ Start batch** once every included drive shows *disk detected*; all included drives then image their disk in parallel, each with its own job panel and track visualiser.
+- If one drive's disk fails, the others keep going; the failure is reported and its disk number is never reused.
+- Press **✕ Finish job** at any point to end the group session.
+- Group configuration round-trips through job presets like any other setting.
 
 ### Post-Actions (Sequential)
 
@@ -169,6 +184,7 @@ Actions can be reordered (▲ ▼), individually enabled or disabled, and edited
 
 - **gw.exe path** — point to your local installation; defaults to `gw.exe` on `PATH`.
 - **Language** — English or German UI.
+- After saving, the dialog's **Cancel** button relabels itself **OK** to confirm the changes were applied.
 - Settings are stored as JSON in `%APPDATA%\GreaseWeazleManager\settings.json`.
 
 ## Log Folder Structure
