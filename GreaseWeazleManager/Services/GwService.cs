@@ -258,8 +258,10 @@ namespace GwCopyPro.Services
             job.Status = JobStatus.Running;
 
             string logSuffix = job.RepetitiveMode ? $"_disk{job.DiskIndex}" : "";
-            string baseLog = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "Logs",
+            string logRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "GreaseWeazleManager", "Logs");
+            string baseLog = Path.Combine(logRoot,
                 $"Job_{job.JobType}_{job.Id}_{job.CreatedAt:yyyyMMdd_HHmmss}{logSuffix}");
             Directory.CreateDirectory(baseLog);
             job.LogFolder = baseLog;
