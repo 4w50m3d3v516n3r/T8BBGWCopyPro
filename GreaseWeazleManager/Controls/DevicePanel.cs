@@ -30,6 +30,7 @@ namespace GwCopyPro.Controls
         {
             InitializeComponent();
             SetDoubleBuffered();
+            ApplyLocalizedText();
         }
 
         /// <summary>
@@ -53,6 +54,7 @@ namespace GwCopyPro.Controls
 
             InitializeComponent();
             SetDoubleBuffered();
+            ApplyLocalizedText();
             PopulateContent(device);
 
             if (device.IsConnected) _pulseTimer.Start();
@@ -64,6 +66,21 @@ namespace GwCopyPro.Controls
         /// </summary>
         private void SetDoubleBuffered() => SetStyle(ControlStyles.OptimizedDoubleBuffer |
             ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+
+        /// <summary>
+        /// Sets the button captions from <see cref="L10n"/>. Done here rather than in
+        /// InitializeComponent because the icon glyphs in these strings (e.g. "▶ New Job")
+        /// are non-ASCII, and the WinForms Designer has repeatedly re-saved
+        /// DevicePanel.Designer.cs using a codepage that can't represent them, mangling the
+        /// glyphs into "?" literals. Applying them from this plain .cs file survives Designer
+        /// resaves.
+        /// </summary>
+        private void ApplyLocalizedText()
+        {
+            _btnNewJob.Text = L10n.T("dev.new_job");
+            _btnRemove.Text = L10n.T("dev.remove");
+            _btnBlink.Text  = L10n.T("dev.blink");
+        }
 
         /// <summary>Fills in the per-instance text that InitializeComponent cannot know statically.</summary>
         private void PopulateContent(GreaseWeazleDevice device)
