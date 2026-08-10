@@ -20,11 +20,11 @@ namespace GwCopyPro.Forms
     /// </summary>
     public partial class MainForm : Form
     {
-        private readonly List<GreaseWeazleDevice>      _devices   = new();
-        private readonly List<GwJob>                   _jobs      = new();
-        private readonly List<CancellationTokenSource> _cts       = new();
-        private readonly GwService                     _gwService = new();
-        private readonly Dictionary<string, JobPanel>  _jobPanels = new();
+        private readonly List<GreaseWeazleDevice> _devices = new();
+        private readonly List<GwJob> _jobs = new();
+        private readonly List<CancellationTokenSource> _cts = new();
+        private readonly GwService _gwService = new();
+        private readonly Dictionary<string, JobPanel> _jobPanels = new();
         private bool _blinkInProgress;
         private bool _errorFlash;
         private System.Windows.Forms.Timer? _flashBorderTimer;
@@ -58,7 +58,7 @@ namespace GwCopyPro.Forms
         /// <summary>Reverts the status label to "Ready" once the auto-clear timer elapses.</summary>
         private void StatusTimer_Tick(object? sender, EventArgs e)
         {
-            _statusMsg.Text      = L10n.T("app.ready");
+            _statusMsg.Text = L10n.T("app.ready");
             _statusMsg.ForeColor = Color.FromArgb(90, 175, 90);
             _statusTimer.Stop();
         }
@@ -69,11 +69,11 @@ namespace GwCopyPro.Forms
         /// </summary>
         private void WireEvents()
         {
-            _gwService.JobStarted   += GwService_JobStarted;
+            _gwService.JobStarted += GwService_JobStarted;
             _gwService.TrackUpdated += GwService_TrackUpdated;
-            _gwService.JobProgress  += GwService_JobProgress;
+            _gwService.JobProgress += GwService_JobProgress;
             _gwService.JobCompleted += GwService_JobCompleted;
-            _gwService.JobError     += GwService_JobError;
+            _gwService.JobError += GwService_JobError;
             _gwService.DiskCompleted += GwService_DiskCompleted;
         }
 
@@ -164,17 +164,17 @@ namespace GwCopyPro.Forms
             dlg.ShowDialog(this);
 
             var s = AppSettings.Instance;
-            _gwService.GwExePath  = s.GwExePath;
-            _lblGwPath.Text       = string.Format(L10n.T("app.gw_path"), s.GwExePath);
+            _gwService.GwExePath = s.GwExePath;
+            _lblGwPath.Text = string.Format(L10n.T("app.gw_path"), s.GwExePath);
             L10n.SetLanguage(s.Language);
 
-            _btnNewJob.Text   = L10n.T("btn.new_job");
-            _btnDevices.Text  = L10n.T("btn.devices");
+            _btnNewJob.Text = L10n.T("btn.new_job");
+            _btnDevices.Text = L10n.T("btn.devices");
             _btnSettings.Text = L10n.T("btn.settings");
-            _btnClear.Text    = L10n.T("btn.clear_done");
-            _lblDevices.Text  = L10n.T("app.devices");
-            _lblJobs.Text     = L10n.T("app.active_jobs");
-            _statusMsg.Text   = L10n.T("app.ready");
+            _btnClear.Text = L10n.T("btn.clear_done");
+            _lblDevices.Text = L10n.T("app.devices");
+            _lblJobs.Text = L10n.T("app.active_jobs");
+            _statusMsg.Text = L10n.T("app.ready");
             UpdateJobCount();
             RefreshDeviceBar();
         }
@@ -283,7 +283,7 @@ namespace GwCopyPro.Forms
             _cts.Add(cts);
 
             var service = new GroupJobService(_gwService);
-            var prober  = new DriveProber(_gwService.GwExePath);
+            var prober = new DriveProber(_gwService.GwExePath);
 
             service.MemberJobsCreated += (s, e) => SafeInvoke(() => CreateGroupMemberPanels(e.Group));
 
@@ -462,11 +462,11 @@ namespace GwCopyPro.Forms
         /// <summary>Creates the placeholder label shown in the device strip when no devices are registered.</summary>
         private Label MakeNoDevLabel() => new()
         {
-            Text      = L10n.T("nodev.label"),
-            Font      = new Font("Consolas", 8.5f),
+            Text = L10n.T("nodev.label"),
+            Font = new Font("Consolas", 8.5f),
             ForeColor = Color.FromArgb(65, 85, 115),
-            AutoSize  = true,
-            Padding   = new Padding(10, 50, 0, 0),
+            AutoSize = true,
+            Padding = new Padding(10, 50, 0, 0),
             BackColor = Color.Transparent
         };
 
@@ -474,7 +474,7 @@ namespace GwCopyPro.Forms
         private void UpdateJobCount()
         {
             int running = _jobs.Count(j => j.Status == JobStatus.Running);
-            int total   = _jobs.Count;
+            int total = _jobs.Count;
             _lblJobCount.Text = string.Format(L10n.T("status.jobs_count"), total, running);
         }
 
@@ -486,7 +486,7 @@ namespace GwCopyPro.Forms
         /// <param name="color">Foreground colour for the message.</param>
         private void SetStatus(string text, Color color)
         {
-            _statusMsg.Text      = text;
+            _statusMsg.Text = text;
             _statusMsg.ForeColor = color;
             _statusTimer.Stop();
             _statusTimer.Start();
@@ -505,7 +505,7 @@ namespace GwCopyPro.Forms
             _flashBorderTimer.Tick += (s, e) =>
             {
                 _errorFlash = !_errorFlash;
-                BackColor   = _errorFlash ? Color.FromArgb(40, 14, 14) : Color.FromArgb(14, 16, 24);
+                BackColor = _errorFlash ? Color.FromArgb(40, 14, 14) : Color.FromArgb(14, 16, 24);
                 if (++count >= 8)
                 {
                     _flashBorderTimer.Stop();
@@ -541,6 +541,11 @@ namespace GwCopyPro.Forms
             foreach (var cts in _cts)
                 try { cts.Cancel(); } catch { }
             base.OnFormClosing(e);
+        }
+
+        private void lblTitle_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
