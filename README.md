@@ -2,7 +2,7 @@
 
 ![ScreenShot](/images/gw-copy-pro-banner.png)
 
-[DOWNLOAD HERE!](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.0.0)
+[DOWNLOAD HERE!](https://github.com/4w50m3d3v516n3r/T8BBGWCopyPro/releases/tag/v1.1.0)
 
 # GWCopyPro
 
